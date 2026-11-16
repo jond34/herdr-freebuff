@@ -801,16 +801,42 @@ function recentChats() {
   return chats.slice(0, 20)
 }
 
+function processEnv(pid, name) {
+  let text
+  try {
+    text = fs.readFileSync(`/proc/${pid}/environ`, 'utf8')
+  } catch {
+    return null
+  }
+  for (const entry of text.split('\0')) {
+    const equals = entry.indexOf('=')
+    if (equals > 0 && entry.slice(0, equals) === name) {
+      return entry.slice(equals + 1)
+    }
+  }
+  return null
+}
+
 // The doctor action is invoked with only Herdr's pane context. Find the
 // watcher already running for that pane so the report describes the real
-// launcher/child tree instead of an empty argument set.
+// launcher/child tree instead of an empty argument set. Pane IDs are scoped to
+// a Herdr session, so compare the watcher's inherited socket path with the
+// doctor's own context before selecting one.
 function findWatcherForPane(paneId) {
-  if (!paneId) return null
+  const sessionIdentity = process.env.HERDR_SOCKET_PATH || ''
+  const result = {
+    watcher: null,
+    candidates: [],
+    ambiguous: false,
+    reason: 'not-found',
+    sessionIdentity,
+  }
+  if (!paneId) return { ...result, reason: 'no-pane' }
   let entries
   try {
     entries = fs.readdirSync('/proc')
   } catch {
-    return null
+    return result
   }
   const script = path.join(PLUGIN_ROOT, 'scripts', 'status-watcher.js')
   for (const entry of entries) {
@@ -838,19 +864,50 @@ function findWatcherForPane(paneId) {
     const explicitChatId = safeChatId(args[scriptIndex + 3])
       ? args[scriptIndex + 3]
       : ''
-    return { watcherPid: pid, launcherPid, explicitChatId }
+    result.candidates.push({
+      watcherPid: pid,
+      launcherPid,
+      explicitChatId,
+      sessionSocket: processEnv(pid, 'HERDR_SOCKET_PATH') || '',
+    })
   }
-  return null
+
+  if (sessionIdentity) {
+    const matches = result.candidates.filter(
+      (candidate) => candidate.sessionSocket === sessionIdentity,
+    )
+    if (matches.length === 1) {
+      result.watcher = matches[0]
+      result.reason = 'session-match'
+    } else if (matches.length > 1) {
+      result.ambiguous = true
+      result.reason = 'multiple-session-matches'
+    } else if (result.candidates.length > 0) {
+      result.ambiguous = true
+      result.reason = 'no-session-match'
+    }
+    return result
+  }
+
+  if (result.candidates.length === 1) {
+    result.watcher = result.candidates[0]
+    result.reason = 'single-candidate'
+  } else if (result.candidates.length > 1) {
+    result.ambiguous = true
+    result.reason = 'session-identity-unavailable'
+  }
+  return result
 }
 
 function runDoctor(extra) {
   const explicitLauncherPid = Number(extra[0] || 0)
   let launcherPid = explicitLauncherPid
   let chatId = extra[1] || START_CHAT_ID || ''
-  const watcher =
+  const watcherLookup =
     !launcherPid && process.env.HERDR_PANE_ID
       ? findWatcherForPane(process.env.HERDR_PANE_ID)
       : null
+  const watcher = watcherLookup ? watcherLookup.watcher : null
   if (watcher) {
     launcherPid = watcher.launcherPid
     if (!chatId) chatId = watcher.explicitChatId
@@ -868,6 +925,11 @@ function runDoctor(extra) {
     chatDir = chatDirByProcFd(livePids) || chatDirByPidScan(livePids)
   }
   const boundChatId = chatDir ? path.basename(chatDir) : chatId
+  const sessionMatched = watcher
+    ? watcherLookup.sessionIdentity
+      ? watcher.sessionSocket === watcherLookup.sessionIdentity
+      : null
+    : false
 
   const report = {
     plugin: manifestInfo(),
@@ -889,6 +951,23 @@ function runDoctor(extra) {
       launcherPid: launcherPid || null,
       launcherAlive: launcherPid ? pidAlive(launcherPid) : null,
       descendants: children,
+    },
+    doctor: {
+      session: watcherLookup
+        ? {
+            socketPath: watcherLookup.sessionIdentity || null,
+            matched: sessionMatched,
+            ambiguous: watcherLookup.ambiguous,
+            reason: watcherLookup.reason,
+            candidateCount: watcherLookup.candidates.length,
+          }
+        : {
+            socketPath: process.env.HERDR_SOCKET_PATH || null,
+            matched: false,
+            ambiguous: false,
+            reason: explicitLauncherPid ? 'explicit-launcher' : 'no-pane',
+            candidateCount: 0,
+          },
     },
     binding: {
       explicitChatId: extra[1] || START_CHAT_ID || null,

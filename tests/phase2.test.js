@@ -154,8 +154,9 @@ function writeCheckpoint(chatDir, messages) {
 
 function startPane(ctx, options = {}) {
   const pane = options.pane || `pane-${++ctx.seq}`
-  const pidFile = path.join(ctx.root, `${pane}.child.pid`)
-  const argsFile = path.join(ctx.root, `${pane}.args`)
+  const label = options.label || pane
+  const pidFile = path.join(ctx.root, `${label}.child.pid`)
+  const argsFile = path.join(ctx.root, `${label}.args`)
   fs.rmSync(pidFile, { force: true })
   fs.rmSync(argsFile, { force: true })
 
@@ -187,11 +188,25 @@ function startPane(ctx, options = {}) {
     env,
     stdio: ['ignore', 'pipe', 'pipe'],
   })
-  const paneState = { proc, pane, pidFile, argsFile, stdout: '', stderr: '' }
+  const paneState = { proc, pane, label, pidFile, argsFile, stdout: '', stderr: '' }
   if (proc.stdout) proc.stdout.on('data', (chunk) => { paneState.stdout += String(chunk) })
   if (proc.stderr) proc.stderr.on('data', (chunk) => { paneState.stderr += String(chunk) })
   ctx.launchers.push(paneState)
   return paneState
+}
+
+function doctorEnv(ctx, options = {}) {
+  const env = {
+    ...process.env,
+    HERDR_ENV: '1',
+    HERDR_PANE_ID: options.pane || '',
+    HERDR_PLUGIN_ROOT: REPO,
+    FREEBUFF_CONFIG_DIR: ctx.config,
+    FREEBUFF_BIN_PATH: ctx.fakeLauncher,
+  }
+  delete env.HERDR_SOCKET_PATH
+  if (options.socketPath) env.HERDR_SOCKET_PATH = options.socketPath
+  return env
 }
 
 function readPid(file) {
@@ -514,6 +529,102 @@ test('doctor discovers the pane watcher and its chat binding', { timeout: 20000 
     'resume-named',
     'chat-doctor',
   ])
+})
+
+test('doctor selects the watcher from the matching Herdr session', { timeout: 20000 }, async (t) => {
+  const ctx = setup(t)
+  const chatA = createChat(ctx, 'chat-a')
+  const chatB = createChat(ctx, 'chat-b')
+  const socketA = path.join(ctx.root, 'session-a.sock')
+  const socketB = path.join(ctx.root, 'session-b.sock')
+  const paneA = startPane(ctx, {
+    pane: 'w1:p2',
+    label: 'session-a',
+    chatDir: chatA,
+    env: { HERDR_SOCKET_PATH: socketA },
+  })
+  const paneB = startPane(ctx, {
+    pane: 'w1:p2',
+    label: 'session-b',
+    chatDir: chatB,
+    env: { HERDR_SOCKET_PATH: socketB },
+  })
+  const childA = await waitForChild(paneA)
+  const childB = await waitForChild(paneB)
+  await waitFor('both session reports', () => {
+    const ids = sessions(ctx, 'w1:p2').map((session) =>
+      argValue(session, '--agent-session-id'),
+    )
+    return ids.includes('chat-a') && ids.includes('chat-b')
+  })
+
+  const result = spawnSync('sh', [DOCTOR], {
+    cwd: ctx.projectDir,
+    env: doctorEnv(ctx, { pane: 'w1:p2', socketPath: socketA }),
+    encoding: 'utf8',
+    timeout: 5000,
+  })
+  assert.equal(result.status, 0, result.stderr)
+  const report = JSON.parse(result.stdout)
+  assert.equal(report.process.launcherPid, paneA.proc.pid)
+  assert.equal(report.process.launcherAlive, true)
+  assert.ok(report.process.descendants.includes(childA))
+  assert.ok(!report.process.descendants.includes(childB))
+  assert.equal(report.binding.chatId, 'chat-a')
+  assert.equal(report.binding.chatDir, chatA)
+  assert.deepEqual(report.resume.argv, [
+    '--',
+    'sh',
+    path.join(REPO, 'scripts', 'launch.sh'),
+    'resume-named',
+    'chat-a',
+  ])
+  assert.equal(report.doctor.session.matched, true)
+  assert.equal(report.doctor.session.ambiguous, false)
+  assert.equal(report.doctor.session.reason, 'session-match')
+  assert.equal(report.doctor.session.candidateCount, 2)
+})
+
+test('doctor refuses to choose between same-pane watchers without session identity', { timeout: 20000 }, async (t) => {
+  const ctx = setup(t)
+  const chatA = createChat(ctx, 'chat-a')
+  const chatB = createChat(ctx, 'chat-b')
+  const paneA = startPane(ctx, {
+    pane: 'w1:p2',
+    label: 'session-a',
+    chatDir: chatA,
+    env: { HERDR_SOCKET_PATH: path.join(ctx.root, 'session-a.sock') },
+  })
+  const paneB = startPane(ctx, {
+    pane: 'w1:p2',
+    label: 'session-b',
+    chatDir: chatB,
+    env: { HERDR_SOCKET_PATH: path.join(ctx.root, 'session-b.sock') },
+  })
+  await waitForChild(paneA)
+  await waitForChild(paneB)
+  await waitFor('both session reports', () => {
+    const ids = sessions(ctx, 'w1:p2').map((session) =>
+      argValue(session, '--agent-session-id'),
+    )
+    return ids.includes('chat-a') && ids.includes('chat-b')
+  })
+
+  const result = spawnSync('sh', [DOCTOR], {
+    cwd: ctx.projectDir,
+    env: doctorEnv(ctx, { pane: 'w1:p2' }),
+    encoding: 'utf8',
+    timeout: 5000,
+  })
+  assert.equal(result.status, 0, result.stderr)
+  const report = JSON.parse(result.stdout)
+  assert.equal(report.process.watcherPid, null)
+  assert.equal(report.process.launcherPid, null)
+  assert.equal(report.binding.chatId, null)
+  assert.equal(report.doctor.session.matched, false)
+  assert.equal(report.doctor.session.ambiguous, true)
+  assert.equal(report.doctor.session.reason, 'session-identity-unavailable')
+  assert.equal(report.doctor.session.candidateCount, 2)
 })
 
 test('doctor emits JSON evidence without chat content', { timeout: 10000 }, async (t) => {

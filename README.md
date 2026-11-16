@@ -3,14 +3,15 @@
 Freebuff integration for [Herdr](https://herdr.dev), the terminal multiplexer
 for coding agents.
 
-> **Status: Phase 2 implementation complete; live validation pending.** This
-> repository has the Freebuff 0.2.36 lifecycle, chat attribution, and session
-> reporting implementation, but it is not yet a release. Phase 3 validates it
-> against a real Herdr 0.9.5 installation.
+> **Status: Phase 3 live validation complete; Phase 4 hardening complete
+> locally.** The Freebuff 0.2.36 lifecycle, chat attribution, session reporting,
+> and session-aware doctor were validated against Herdr 0.9.5. This is not yet
+> a release.
 
-The goal is to make Freebuff a first-class Herdr agent: report `idle`,
-`working`, and `blocked` to the pane, launch Freebuff in plugin panes, and
-restore a conversation after a Herdr restart.
+The goal is to make Freebuff a reliable agent inside Herdr plugin panes: report
+`idle`, `working`, and `blocked`, launch Freebuff in a real PTY, restore a
+conversation after a Herdr restart, and expose enough evidence to diagnose
+unresolved panes.
 
 ## Lineage
 
@@ -28,7 +29,8 @@ and [LICENSE](LICENSE).
 ## Scope
 
 - Linux first, including WSL2 when Herdr and Freebuff run in the same distro.
-- Target: Herdr 0.9.2 or newer and Freebuff 0.2.x.
+- Target: Herdr 0.9.2 or newer and Freebuff 0.2.x; validated on Herdr 0.9.5
+  with Freebuff 0.2.36.
 - Node.js 22 or newer for the watcher.
 - macOS is a follow-up because the PID resolver needs a portable replacement
   for `/proc`. Windows-native Herdr driving Freebuff inside WSL is not
@@ -36,6 +38,22 @@ and [LICENSE](LICENSE).
 
 The plugin never replaces `~/.local/bin/freebuff` and never installs a global
 PATH wrapper. It runs in Herdr plugin panes, which provide a real PTY.
+
+## Herdr agent surface
+
+Herdr 0.9.5 lets a pane self-report an agent and its current session. For
+Freebuff, this supplies:
+
+- `idle`, `working`, and `blocked` state reporting.
+- Herdr's native agent notifications and `herdr agent wait`.
+- Agent session ID, path, and resume argv for restart restoration.
+- The `doctor` action for process and chat-binding evidence.
+
+It does not make Freebuff a built-in Herdr agent kind. For self-reported agents
+such as Freebuff, Herdr 0.9.5 does not expose `herdr agent prompt`,
+`herdr agent send-keys`, `herdr agent start --kind`, or `herdr agent explain`.
+This plugin does not wrap `herdr pane send-text` to imitate those commands, and
+it does not install detection overrides or a fake agent label.
 
 ## Development
 
@@ -46,9 +64,11 @@ herdr plugin link /path/to/herdr-freebuff
 herdr plugin list
 ```
 
-The pane entrypoints are `task` and `resume-last`. The Phase 2 tests drive
-`launch.sh` with a fake launcher/child process tree and a JSON-recording Herdr
-stub, so they exercise the real PID attribution path without a Herdr install:
+The pane entrypoints are `task` and `resume-last`. The tests drive `launch.sh`
+with a fake launcher/child process tree and a JSON-recording Herdr stub, so they
+exercise the real PID attribution path without a Herdr install. The suite also
+covers two Herdr sessions using the same pane ID, including the doctor's
+session-aware watcher selection and its ambiguity refusal:
 
 ```bash
 sh tests/run.sh
@@ -56,8 +76,12 @@ node --check scripts/status-watcher.js
 ```
 
 The `doctor` action inspects the focused pane and reports its watcher, launcher,
-child processes, bound chat, and resume argv. From a shell, pass a launcher PID
-and optional chat ID to inspect an unresolved pane:
+child processes, bound chat, and resume argv. It matches the watcher by pane ID
+and the pane's inherited `HERDR_SOCKET_PATH`, so two Herdr sessions with the
+same pane ID do not collide. If several candidates remain and session identity
+cannot choose one, the report marks the result ambiguous instead of guessing.
+From a shell, pass a launcher PID and optional chat ID to inspect an unresolved
+pane:
 
 ```bash
 sh scripts/doctor.sh [launcher-pid] [chat-id]

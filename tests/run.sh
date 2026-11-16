@@ -1,5 +1,5 @@
 #!/bin/sh
-# Phase 2 verification entrypoint.
+# Plugin verification entrypoint.
 #
 # Run: sh tests/run.sh
 

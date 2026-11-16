@@ -39,7 +39,7 @@ and [LICENSE](LICENSE).
 The plugin never replaces `~/.local/bin/freebuff` and never installs a global
 PATH wrapper. It runs in Herdr plugin panes, which provide a real PTY.
 
-## Herdr agent surface
+## Herdr support and parity
 
 Herdr 0.9.5 lets a pane self-report an agent and its current session. For
 Freebuff, this supplies:
@@ -49,11 +49,30 @@ Freebuff, this supplies:
 - Agent session ID, path, and resume argv for restart restoration.
 - The `doctor` action for process and chat-binding evidence.
 
-It does not make Freebuff a built-in Herdr agent kind. For self-reported agents
-such as Freebuff, Herdr 0.9.5 does not expose `herdr agent prompt`,
-`herdr agent send-keys`, `herdr agent start --kind`, or `herdr agent explain`.
-This plugin does not wrap `herdr pane send-text` to imitate those commands, and
-it does not install detection overrides or a fake agent label.
+That is the complete supported surface. It does not make Freebuff a built-in
+Herdr agent kind, and the plugin cannot change that from outside Herdr.
+
+### Parity limitation
+
+Herdr's built-in agent kinds expose a command surface that self-reported agents
+do not receive. On Herdr 0.9.5, Freebuff does not support:
+
+| Command | Freebuff support | Implication |
+|---|---|---|
+| `herdr agent prompt` | Unavailable | Type into the Freebuff pane directly. Scripts that target Freebuff through Herdr cannot use this command. |
+| `herdr agent send-keys` | Unavailable | Send keys directly to the pane if needed. The plugin does not expose this as an agent API. |
+| `herdr agent start --kind` | Unavailable | Start Freebuff with the plugin's `task` or `resume-last` panes. |
+| `herdr agent explain` | Unavailable | Use `doctor` for Freebuff process, chat, and resume evidence. |
+
+`herdr pane send-text` can write text into the pane, but it does not provide the
+native foreground-agent guard and is not equivalent to `agent prompt`. The
+plugin intentionally does not wrap it, add detection overrides, or use a fake
+agent label.
+
+This is a Herdr capability limit, not a configuration error in the plugin. Native
+parity would require Herdr to expose self-reported agents on the native agent
+surface, or to add Freebuff as a built-in kind. State reporting, notifications,
+`herdr agent wait`, session restore, and `doctor` continue to work.
 
 ## Development
 

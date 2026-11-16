@@ -13,17 +13,22 @@ platforms = ["linux"]
 #   command = "freebuff.integration.task"
 #   description = "Freebuff: new task"
 
+# Commands normally run with the plugin directory as their working directory,
+# but a pane opened with an explicit cwd runs there instead. Resolve the script
+# through HERDR_PLUGIN_ROOT so both paths work and Freebuff still starts in the
+# pane's directory.
+
 [[panes]]
 id = "task"
 title = "Freebuff"
 placement = "split"
-command = ["sh", "scripts/launch.sh", "task"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/scripts/launch.sh\" task"]
 
 [[panes]]
 id = "resume-last"
 title = "Freebuff (last chat)"
 placement = "split"
-command = ["sh", "scripts/launch.sh", "resume-last"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/scripts/launch.sh\" resume-last"]
 
 [[actions]]
 id = "doctor"

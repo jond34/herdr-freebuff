@@ -74,9 +74,6 @@ herdr-freebuff/
     test-watcher.sh
 ```
 
-`PLAN.md` is local planning material. It is gitignored and is not part of the
-published repository.
-
 ## Contributing
 
 Issues and pull requests are welcome. There is no CLA, and support is

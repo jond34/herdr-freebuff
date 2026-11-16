@@ -23,13 +23,16 @@ jobs:
         run: |
           sh -n scripts/common.sh
           sh -n scripts/launch.sh
-          sh -n tests/test-watcher.sh
+          sh -n scripts/doctor.sh
+          sh -n tests/run.sh
 
       - name: JavaScript syntax
-        run: node --check scripts/status-watcher.js
+        run: |
+          node --check scripts/status-watcher.js
+          node --check tests/phase2.test.js
 
       - name: Watcher tests
-        run: sh tests/test-watcher.sh
+        run: sh tests/run.sh
 
       - name: Secret and local-path scan
         run: |

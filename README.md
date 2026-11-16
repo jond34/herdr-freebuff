@@ -3,10 +3,10 @@
 Freebuff integration for [Herdr](https://herdr.dev), the terminal multiplexer
 for coding agents.
 
-> **Status: early public bootstrap.** This repository imports the 1024ch
-> watcher rewrite and is being adapted for Freebuff 0.2.36 with Herdr 0.9.5.
-> It is not yet a release; the lifecycle and session fixes are still in
-> progress.
+> **Status: Phase 2 implementation complete; live validation pending.** This
+> repository has the Freebuff 0.2.36 lifecycle, chat attribution, and session
+> reporting implementation, but it is not yet a release. Phase 3 validates it
+> against a real Herdr 0.9.5 installation.
 
 The goal is to make Freebuff a first-class Herdr agent: report `idle`,
 `working`, and `blocked` to the pane, launch Freebuff in plugin panes, and
@@ -46,12 +46,19 @@ herdr plugin link /path/to/herdr-freebuff
 herdr plugin list
 ```
 
-The pane entrypoints are `task` and `resume-last`. The imported tests exercise
-the watcher without a real Herdr installation:
+The pane entrypoints are `task` and `resume-last`. The Phase 2 tests drive
+`launch.sh` with a fake launcher/child process tree and a JSON-recording Herdr
+stub, so they exercise the real PID attribution path without a Herdr install:
 
 ```bash
-sh tests/test-watcher.sh
+sh tests/run.sh
 node --check scripts/status-watcher.js
+```
+
+`doctor` prints diagnostic JSON for an unresolved pane:
+
+```bash
+sh scripts/doctor.sh
 ```
 
 ## Layout
@@ -69,9 +76,11 @@ herdr-freebuff/
   scripts/
     launch.sh
     status-watcher.js
+    doctor.sh
     common.sh
   tests/
-    test-watcher.sh
+    run.sh
+    phase2.test.js
 ```
 
 ## Contributing

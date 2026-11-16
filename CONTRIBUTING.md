@@ -8,7 +8,7 @@ best-effort.
 - Keep the change focused and explain the Freebuff/Herdr behavior it fixes.
 - Run the checks from the README:
   ```bash
-  sh tests/test-watcher.sh
+  sh tests/run.sh
   node --check scripts/status-watcher.js
   ```
 - Add or update a synthetic test when you change watcher behavior.

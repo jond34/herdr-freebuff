@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Shell syntax
+        run: |
+          sh -n scripts/common.sh
+          sh -n scripts/launch.sh
+          sh -n tests/test-watcher.sh
+
+      - name: JavaScript syntax
+        run: node --check scripts/status-watcher.js
+
+      - name: Watcher tests
+        run: sh tests/test-watcher.sh
+
+      - name: Secret and local-path scan
+        run: |
+          set -eu
+          if git grep -nE 'BEGIN (RSA|OPENSSH|EC|DSA) PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{20,}|xox[baprs]-[A-Za-z0-9-]+' -- . ':!*.yml'; then
+            echo "possible secret material" >&2
+            exit 1
+          fi
+          if git grep -nE '/(home|Users)/[^/[:space:]]+' -- . ':!*.yml'; then
+            echo "absolute home path in tracked files" >&2
+            exit 1
+          fi

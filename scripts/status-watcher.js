@@ -280,7 +280,7 @@ function refreshPids(force = false) {
   activePids = next
 }
 
-function logTailHasActivePid(chatDir) {
+function logTailHasActivePid(chatDir, pids = activePids) {
   const file = path.join(chatDir, 'log.jsonl')
   let text
   try {
@@ -291,18 +291,18 @@ function logTailHasActivePid(chatDir) {
   const pattern = /"pid"\s*:\s*(\d+)/g
   let match
   while ((match = pattern.exec(text)) !== null) {
-    if (activePids.has(Number(match[1]))) return true
+    if (pids.has(Number(match[1]))) return true
   }
   return false
 }
 
 /* ---------------------------- Chat attribution --------------------------- */
 
-function chatDirByProcFd() {
+function chatDirByProcFd(pids = activePids) {
   const root = projectsRoot()
   let best = ''
   let bestMtime = 0
-  for (const pid of activePids) {
+  for (const pid of pids) {
     let fds
     try {
       fds = fs.readdirSync(`/proc/${pid}/fd`)
@@ -333,7 +333,7 @@ function chatDirByProcFd() {
   return best
 }
 
-function chatDirByPidScan() {
+function chatDirByPidScan(pids = activePids) {
   const root = projectsRoot()
   let projects
   try {
@@ -360,7 +360,7 @@ function chatDirByPidScan() {
     }
     candidates.sort((a, b) => b.mtime - a.mtime)
     for (const candidate of candidates.slice(0, 50)) {
-      if (logTailHasActivePid(candidate.full)) return candidate.full
+      if (logTailHasActivePid(candidate.full, pids)) return candidate.full
     }
   }
   return ''
@@ -801,11 +801,74 @@ function recentChats() {
   return chats.slice(0, 20)
 }
 
+// The doctor action is invoked with only Herdr's pane context. Find the
+// watcher already running for that pane so the report describes the real
+// launcher/child tree instead of an empty argument set.
+function findWatcherForPane(paneId) {
+  if (!paneId) return null
+  let entries
+  try {
+    entries = fs.readdirSync('/proc')
+  } catch {
+    return null
+  }
+  const script = path.join(PLUGIN_ROOT, 'scripts', 'status-watcher.js')
+  for (const entry of entries) {
+    if (!/^\d+$/.test(entry)) continue
+    const pid = Number(entry)
+    if (!pidAlive(pid)) continue
+    try {
+      if (fs.statSync(`/proc/${entry}`).uid !== process.getuid()) continue
+    } catch {
+      continue
+    }
+    let args
+    try {
+      args = fs
+        .readFileSync(`/proc/${entry}/cmdline`, 'utf8')
+        .split('\0')
+        .filter(Boolean)
+    } catch {
+      continue
+    }
+    const scriptIndex = args.indexOf(script)
+    if (scriptIndex < 0 || args[scriptIndex + 2] !== paneId) continue
+    const launcherPid = Number(args[scriptIndex + 1])
+    if (!Number.isInteger(launcherPid) || launcherPid <= 0) continue
+    const explicitChatId = safeChatId(args[scriptIndex + 3])
+      ? args[scriptIndex + 3]
+      : ''
+    return { watcherPid: pid, launcherPid, explicitChatId }
+  }
+  return null
+}
+
 function runDoctor(extra) {
-  const launcherPid = Number(extra[0] || 0)
-  const chatId = extra[1] || ''
+  const explicitLauncherPid = Number(extra[0] || 0)
+  let launcherPid = explicitLauncherPid
+  let chatId = extra[1] || START_CHAT_ID || ''
+  const watcher =
+    !launcherPid && process.env.HERDR_PANE_ID
+      ? findWatcherForPane(process.env.HERDR_PANE_ID)
+      : null
+  if (watcher) {
+    launcherPid = watcher.launcherPid
+    if (!chatId) chatId = watcher.explicitChatId
+  }
+
   const bin = process.env.FREEBUFF_BIN_PATH || findOnPath('freebuff')
   const children = launcherPid ? [...collectDescendants(launcherPid)] : []
+  const livePids = new Set()
+  if (launcherPid && pidAlive(launcherPid)) livePids.add(launcherPid)
+  for (const pid of children) {
+    if (pidAlive(pid)) livePids.add(pid)
+  }
+  let chatDir = chatId ? explicitChatDir(chatId) : ''
+  if (!chatDir && livePids.size) {
+    chatDir = chatDirByProcFd(livePids) || chatDirByPidScan(livePids)
+  }
+  const boundChatId = chatDir ? path.basename(chatDir) : chatId
+
   const report = {
     plugin: manifestInfo(),
     herdr: {
@@ -822,20 +885,18 @@ function runDoctor(extra) {
       chats: recentChats(),
     },
     process: {
+      watcherPid: watcher ? watcher.watcherPid : null,
       launcherPid: launcherPid || null,
       launcherAlive: launcherPid ? pidAlive(launcherPid) : null,
       descendants: children,
     },
     binding: {
-      explicitChatId: chatId || START_CHAT_ID || null,
-      chatDir: chatId
-        ? explicitChatDir(chatId)
-        : START_CHAT_ID
-          ? explicitChatDir(START_CHAT_ID)
-          : null,
+      explicitChatId: extra[1] || START_CHAT_ID || null,
+      chatId: boundChatId || null,
+      chatDir: chatDir || null,
     },
     resume: {
-      argv: chatId ? resumeArgv(chatId) : [],
+      argv: boundChatId ? resumeArgv(boundChatId) : [],
     },
   }
   process.stdout.write(JSON.stringify(report, null, 2) + '\n')

@@ -55,10 +55,12 @@ sh tests/run.sh
 node --check scripts/status-watcher.js
 ```
 
-`doctor` prints diagnostic JSON for an unresolved pane:
+The `doctor` action inspects the focused pane and reports its watcher, launcher,
+child processes, bound chat, and resume argv. From a shell, pass a launcher PID
+and optional chat ID to inspect an unresolved pane:
 
 ```bash
-sh scripts/doctor.sh
+sh scripts/doctor.sh [launcher-pid] [chat-id]
 ```
 
 ## Layout

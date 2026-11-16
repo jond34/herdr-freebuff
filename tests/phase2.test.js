@@ -480,6 +480,42 @@ test('resume-named validates and forwards the chat, resume-last stays project-sc
   assert.equal(argValue(sessions(ctx, 'pane-last')[0], '--agent-session-id'), 'chat-1')
 })
 
+test('doctor discovers the pane watcher and its chat binding', { timeout: 20000 }, async (t) => {
+  const ctx = setup(t)
+  const chat = createChat(ctx, 'chat-doctor')
+  const pane = startPane(ctx, { pane: 'pane-doctor', chatDir: chat })
+  const childPid = await waitForChild(pane)
+  await waitFor('doctor session report', () => sessions(ctx, 'pane-doctor').length > 0)
+
+  const result = spawnSync('sh', [DOCTOR], {
+    cwd: ctx.projectDir,
+    env: {
+      ...process.env,
+      HERDR_ENV: '1',
+      HERDR_PANE_ID: 'pane-doctor',
+      HERDR_PLUGIN_ROOT: REPO,
+      FREEBUFF_CONFIG_DIR: ctx.config,
+      FREEBUFF_BIN_PATH: ctx.fakeLauncher,
+    },
+    encoding: 'utf8',
+    timeout: 5000,
+  })
+  assert.equal(result.status, 0, result.stderr)
+  const report = JSON.parse(result.stdout)
+  assert.equal(report.process.launcherPid, pane.proc.pid)
+  assert.equal(report.process.launcherAlive, true)
+  assert.ok(report.process.descendants.includes(childPid))
+  assert.equal(report.binding.chatId, 'chat-doctor')
+  assert.equal(report.binding.chatDir, chat)
+  assert.deepEqual(report.resume.argv, [
+    '--',
+    'sh',
+    path.join(REPO, 'scripts', 'launch.sh'),
+    'resume-named',
+    'chat-doctor',
+  ])
+})
+
 test('doctor emits JSON evidence without chat content', { timeout: 10000 }, async (t) => {
   const ctx = setup(t)
   createChat(ctx, 'chat-1')

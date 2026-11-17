@@ -9,8 +9,11 @@
 # Usage: register-pane.sh [pane-id]
 #
 # Herdr drops a report whose --seq is not greater than the last one it accepted
-# for that source, so the sequence is microsecond-scaled like the watcher's.
-# A seconds-scale value silently loses to an earlier watcher report.
+# for that source, so the sequence is microsecond-scaled like the watcher's
+# (`Date.now() * 1000`). Node is already required by the plugin and is the only
+# clock here that agrees with the watcher; `date +%3N` is not portable: uutils
+# coreutils ignores the width and returns nanoseconds, which overflows when
+# scaled and turns the seq negative.
 
 set -eu
 
@@ -23,7 +26,7 @@ if [ -z "$pane" ]; then
   exit 1
 fi
 
-seq=$(($(date +%s%3N) * 1000))
+seq=$(node -e 'console.log(Date.now() * 1000)')
 
 exec "$HERDR" pane report-agent "$pane" \
   --source freebuff \

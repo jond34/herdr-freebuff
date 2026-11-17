@@ -29,7 +29,7 @@ jobs:
       - name: JavaScript syntax
         run: |
           node --check scripts/status-watcher.js
-          node --check tests/phase2.test.js
+          node --check tests/watcher.test.js
 
       - name: Watcher tests
         run: sh tests/run.sh

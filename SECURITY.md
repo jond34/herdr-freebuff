@@ -11,8 +11,8 @@ minimal reproduction with synthetic data.
 
 ## Scope
 
-This project is Linux-first. The validated target is Herdr 0.9.5 with Freebuff
-0.2.36; other Freebuff 0.2.x releases are best-effort. The plugin must never
+This project supports Linux, macOS, and Windows. The validated target is Herdr
+0.9.5 with Freebuff 0.2.36; other Freebuff 0.2.x releases are best-effort. The plugin must never
 replace the Freebuff launcher, install a global PATH wrapper, or send prompt
 content in a Herdr notification.
 

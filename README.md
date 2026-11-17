@@ -89,7 +89,7 @@ The `[keys]` table has to come before any `[[keys.command]]` entry.
 |---|---|
 | Herdr 0.9.5 | the `herdr` TUI only, not `herdr-app`/`herdr-core`; validated only on 0.9.5, and `min_herdr_version` refuses anything older. The app's agent list holds only programs that emit [OSC 7501](https://herdr.dev/core), which Freebuff does not |
 | Freebuff 0.2.36 | validated; other 0.2.x releases are best-effort |
-| Linux, WSL2, macOS, or Windows 10+ | On WSL2, Herdr and Freebuff must run in the same distro. macOS passes the test suite in CI, including the process inspection the watcher does without procfs; it has not been walked by hand against a real Freebuff pane yet. Windows runs the PowerShell entrypoints and is reported further down |
+| Linux, WSL2, macOS, or Windows 10+ | On WSL2, Herdr and Freebuff must run in the same distro. macOS passes the test suite in CI, including the process inspection the watcher does without procfs, but has not been walked by hand against a real Freebuff pane. Windows 11 was walked by hand; [Windows](#windows) lists the two limits that matter before installing |
 | Node.js 22+ | runs the background watcher. Without it a pane still starts Freebuff, but the pane stays `unknown` and `doctor` exits |
 
 ## What works
@@ -206,9 +206,9 @@ Two limits are worth knowing before installing:
 
 The mechanisms were verified by hand on Windows 11 against Herdr 0.9.5 and
 Freebuff 0.2.36: pane environment, chat log shape, process liveness, TUI input,
-and a reported `working` state. The port itself has not been walked through a
-full session yet, and CI covers parsing and the binding rules rather than a live
-pane.
+and a reported `working` state. That walk predates the watcher split, so a live
+pane on the current code is unverified; CI covers parsing and the binding rules
+rather than a live pane.
 
 ## Trust
 
@@ -271,7 +271,8 @@ change to one of those starts there and does not need the others.
 `tests/platform.test.js` exercises the platform seam and the chat-binding rules
 without a pane, and `tests/manifest.test.js` asserts that every entrypoint has
 both twins and both scripts exist. CI runs the suite on Linux and macOS, and on
-`windows-latest` where a `powershell` step parses every `.ps1` file.
+`windows-latest`, where it parses every `.ps1` file and runs the platform and
+manifest suites.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the fixture and data rules, and
 [CHANGELOG.md](CHANGELOG.md) for release history.

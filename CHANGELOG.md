@@ -5,6 +5,8 @@ Notable changes to `herdr-freebuff`. Versions match `version` in
 
 ## Unreleased
 
+## 0.1.1 — 2026-11-16
+
 - Add a `new-task` action so `prefix+f` can open the `task` pane. Herdr 0.9.5
   keybindings dispatch plugin actions only, never panes.
 - Correct the install instructions; the previous snippet used an invalid
@@ -15,6 +17,9 @@ Notable changes to `herdr-freebuff`. Versions match `version` in
   invisible in the agent list.
 - Document the second-prefix fallback for terminals and editors that swallow
   `ctrl+b`.
+- State which Herdr this plugin covers: the `herdr` TUI 0.9.5+, not the separate
+  `herdr-app`/`herdr-core` runtime, whose agents list only shows programs that
+  emit OSC 7501 themselves.
 
 ## 0.1.0 — 2026-11-16
 
@@ -73,4 +78,5 @@ a plugin configuration error. See [Limits](README.md#limits).
   Esc, exit/release, two panes in one directory, named-session restart restore,
   and an isolated install from the tagged commit.
 
+[0.1.1]: https://github.com/jond34/herdr-freebuff/releases/tag/v0.1.1
 [0.1.0]: https://github.com/jond34/herdr-freebuff/releases/tag/v0.1.0

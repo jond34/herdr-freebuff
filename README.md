@@ -18,7 +18,7 @@ herdr plugin install jond34/herdr-freebuff
 That tracks `main`. To pin the reviewed release instead:
 
 ```sh
-herdr plugin install jond34/herdr-freebuff --ref v0.1.0
+herdr plugin install jond34/herdr-freebuff --ref v0.1.1
 ```
 
 A pinned install stays on its ref; a default install picks up new commits on
@@ -71,6 +71,16 @@ The `[keys]` table has to come before any `[[keys.command]]` entry.
 | Freebuff 0.2.36 | validated; other 0.2.x releases are best-effort |
 | Linux or WSL2 | Herdr and Freebuff must run in the same distro |
 | Node.js 22+ | runs the background watcher |
+
+### Which Herdr
+
+This plugin covers the `herdr` TUI, 0.9.5 or newer. `herdr-app` and
+`herdr-core` are a separate runtime with their own agent list, and it holds only
+programs that emit [OSC 7501](https://github.com/herdrdev/herdr/discussions/5700)
+status sequences; `herdr-core` does not "guess from screen text or recognize
+agent brands". Freebuff writes terminal titles but not 7501, so a Freebuff pane
+in that runtime stays unlisted until Freebuff emits the sequences itself. This
+plugin's panes, actions, and state reporting belong to the TUI.
 
 ## What works
 

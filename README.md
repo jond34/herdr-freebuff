@@ -35,9 +35,11 @@ command = "freebuff.integration.new-task"
 description = "Freebuff: new task"
 ```
 
-Run `herdr server reload-config`, then press `prefix+f`. Herdr keybindings can
-only invoke plugin actions, so the plugin ships a `new-task` action that opens
-the pane. To skip the key, open it from the CLI:
+Run `herdr server reload-config`, then restart the Herdr client (detach with
+`prefix+q` and run `herdr` again) so it picks up the new keymap, and press
+`prefix+f`. Herdr keybindings can only invoke plugin actions, so the plugin
+ships a `new-task` action that opens the pane. To skip the key, open it from
+the CLI:
 
 ```sh
 herdr plugin pane open --plugin freebuff.integration --entrypoint task

@@ -5,6 +5,14 @@ Notable changes to `herdr-freebuff`. Versions match `version` in
 
 ## Unreleased
 
+- Do not hand Herdr a directory that no longer exists. Herdr opens the pane at
+  `$HOME` in that case without reporting an error, so a pane whose directory
+  was deleted (a removed worktree, a cleaned scratch directory) would file
+  Freebuff chats under a project named after the user. The first candidate
+  directory that still exists is used instead.
+- Cover the paths around that: a directory containing spaces, a deleted
+  focused-pane directory, and no usable directory at all.
+
 ## 0.1.3 — 2026-11-17
 
 - Open the `new-task` pane in the directory of the pane it was invoked from.

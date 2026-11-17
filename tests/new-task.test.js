@@ -14,6 +14,9 @@ function setup(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'herdr-freebuff-new-task-'))
   const calls = path.join(root, 'calls.jsonl')
   fs.writeFileSync(calls, '')
+  // Real directories: the script only passes a candidate that still exists.
+  fs.mkdirSync(path.join(root, 'repo', 'packages', 'api'), { recursive: true })
+  fs.mkdirSync(path.join(root, 'a b'))
 
   const stub = path.join(root, 'stub-herdr.js')
   fs.writeFileSync(
@@ -66,22 +69,57 @@ const open = (cwd) => [
 
 test('opens the pane in the focused pane directory', (t) => {
   const ctx = setup(t)
+  const api = path.join(ctx.root, 'repo', 'packages', 'api')
   const { result, calls } = run(ctx, {
     focused_pane_id: 'w9:p3',
-    focused_pane_cwd: '/work/repo/packages/api',
-    workspace_cwd: '/work/repo',
+    focused_pane_cwd: api,
+    workspace_cwd: path.join(ctx.root, 'repo'),
   })
 
   assert.equal(result.status, 0, result.stderr)
-  assert.deepEqual(calls, [open('/work/repo/packages/api')])
+  assert.deepEqual(calls, [open(api)])
+})
+
+test('passes a directory containing spaces as one argument', (t) => {
+  const ctx = setup(t)
+  const spaced = path.join(ctx.root, 'a b')
+  const { result, calls } = run(ctx, { focused_pane_cwd: spaced })
+
+  assert.equal(result.status, 0, result.stderr)
+  assert.deepEqual(calls, [open(spaced)])
 })
 
 test('falls back to the workspace directory', (t) => {
   const ctx = setup(t)
-  const { result, calls } = run(ctx, { workspace_id: 'w9', workspace_cwd: '/work/repo' })
+  const repo = path.join(ctx.root, 'repo')
+  const { result, calls } = run(ctx, { workspace_id: 'w9', workspace_cwd: repo })
 
   assert.equal(result.status, 0, result.stderr)
-  assert.deepEqual(calls, [open('/work/repo')])
+  assert.deepEqual(calls, [open(repo)])
+})
+
+// Herdr opens the pane at $HOME for a --cwd that does not exist and reports no
+// error, which would file Freebuff chats under a project named after the user.
+test('skips a deleted focused pane directory', (t) => {
+  const ctx = setup(t)
+  const repo = path.join(ctx.root, 'repo')
+  const api = path.join(repo, 'packages', 'api')
+  fs.rmSync(api, { recursive: true })
+  const { result, calls } = run(ctx, { focused_pane_cwd: api, workspace_cwd: repo })
+
+  assert.equal(result.status, 0, result.stderr)
+  assert.deepEqual(calls, [open(repo)])
+})
+
+test('ignores directories that no longer exist entirely', (t) => {
+  const ctx = setup(t)
+  const { result, calls } = run(ctx, {
+    focused_pane_cwd: '/nonexistent/focused',
+    workspace_cwd: '/nonexistent/workspace',
+  })
+
+  assert.equal(result.status, 0, result.stderr)
+  assert.deepEqual(calls, [open(ctx.root)])
 })
 
 test('falls back to the working directory without a context', (t) => {

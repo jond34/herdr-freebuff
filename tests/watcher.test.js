@@ -19,7 +19,7 @@ function writeExecutable(file, body) {
 }
 
 function setup(t) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'herdr-freebuff-'))
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'herdr-freebuff-')))
   const config = path.join(root, 'manicode')
   const projectName = 'project-a'
   const projectDir = path.join(root, projectName)

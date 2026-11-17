@@ -11,7 +11,9 @@ const REPO = path.resolve(__dirname, '..')
 const SCRIPT = path.join(REPO, 'scripts', 'new-task.sh')
 
 function setup(t) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'herdr-freebuff-new-task-'))
+  // realpath: macOS /var is a symlink to /private/var, and the script reports
+  // the resolved form of a directory it opens.
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'herdr-freebuff-new-task-')))
   const calls = path.join(root, 'calls.jsonl')
   fs.writeFileSync(calls, '')
   // Real directories: the script only passes a candidate that still exists.

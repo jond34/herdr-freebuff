@@ -352,12 +352,20 @@ function logTailHasActivePid(chatDir, pids = activePids) {
 
 function chatDirByProcFd(pids = activePids) {
   const root = projectsRoot()
+  // lsof on macOS reports resolved paths, and /var is a symlink to /private/var,
+  // so the projects root has to be matched in both forms.
+  const roots = [root]
+  try {
+    const resolved = fs.realpathSync(root)
+    if (resolved !== root) roots.push(resolved)
+  } catch {}
   let best = ''
   let bestMtime = 0
   for (const pid of pids) {
     for (const target of fdTargets(pid)) {
-      if (!target.startsWith(root + path.sep)) continue
-      const segments = target.slice(root.length + 1).split(path.sep)
+      const matched = roots.find((candidate) => target.startsWith(candidate + path.sep))
+      if (!matched) continue
+      const segments = target.slice(matched.length + 1).split(path.sep)
       if (segments.length < 4 || segments[1] !== 'chats') continue
       const dir = path.join(root, segments[0], 'chats', segments[2])
       if (!isDirectory(dir)) continue

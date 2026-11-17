@@ -112,7 +112,10 @@ wait "$child"
       }
     }
     await sleep(300)
-    fs.rmSync(root, { recursive: true, force: true })
+    // A pane that is still finishing its exit can create a file between the
+    // readdir and the rmdir, so let the removal retry instead of failing the
+    // test that already passed its assertions.
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 })
   })
 
   return ctx
@@ -356,6 +359,20 @@ test('two panes in one project stay isolated by child PID', { timeout: 20000 }, 
   writeLog(chatA, childA, 'Main prompt finished')
   await waitFor('pane A idle', () => states(ctx, 'pane-a').at(-1) === 'idle')
   assert.equal(states(ctx, 'pane-b').at(-1), 'working')
+})
+
+test('a log line from a pid the launcher does not own is ignored', { timeout: 20000 }, async (t) => {
+  const ctx = setup(t)
+  const chat = createChat(ctx, 'chat-1')
+  const pane = startPane(ctx, { pane: 'pane-a', chatDir: chat })
+  await waitForChild(pane)
+  await waitFor('session report', () => sessions(ctx, 'pane-a').length === 1)
+
+  const foreign = spawnSync(process.execPath, ['-e', '']).pid
+  const before = states(ctx, 'pane-a').length
+  writeLog(chat, foreign, '[send-message] Sending message with sdk run config')
+  await sleep(400)
+  assert.deepEqual(states(ctx, 'pane-a').slice(before), [], 'a foreign pid must not move the pane')
 })
 
 test('unresolved chat never falls back to an unrelated newest chat', { timeout: 20000 }, async (t) => {
@@ -649,4 +666,9 @@ test('doctor emits JSON evidence without chat content', { timeout: 10000 }, asyn
   assert.equal(report.freebuff.projectName, 'project-a')
   assert.ok(report.freebuff.chats.some((chat) => chat.id === 'chat-1'))
   assert.equal(JSON.stringify(report).includes('Sending message'), false)
+  // A chat on disk is listed, never claimed: with no watcher and no published
+  // binding this pane has no chat, so the report says so.
+  assert.equal(report.doctor.bindingSource, null)
+  assert.equal(report.binding.chatId, null)
+  assert.equal(report.binding.chatDir, null)
 })

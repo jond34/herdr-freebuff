@@ -14,8 +14,10 @@ best-effort.
 - Add or update a synthetic test when you change watcher behavior.
 - Do not include real Freebuff chat logs, prompts, local usernames, absolute
   home paths, tokens, or other personal data.
-- Keep the plugin Linux-first. macOS support needs a portable PID resolver and
-  should be proposed separately.
+- Keep the plugin working on Linux, macOS, and Windows. What a host cannot do
+  belongs behind `scripts/platform/`, and callers branch on what the seam can
+  see (`seesOpenFiles`, `seesProcessTable`), never on a platform name. A new
+  platform needs a seam implementation and a manifest entry per entrypoint.
 
 ## Scope
 

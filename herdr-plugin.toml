@@ -1,9 +1,9 @@
 id = "freebuff.integration"
 name = "Freebuff"
-version = "0.1.5"
+version = "0.2.0"
 min_herdr_version = "0.9.5"
-description = "Launch Freebuff inside Herdr with live agent status, notifications, chat attribution, and session restore."
-platforms = ["linux", "macos"]
+description = "Launch Freebuff inside Herdr with live agent status, notifications, chat binding, and session restore."
+platforms = ["linux", "macos", "windows"]
 
 # Freebuff's TUI needs a real PTY, so it runs in a plugin pane rather than an
 # action or CLI call. Herdr keybindings can only invoke plugin actions, not
@@ -14,24 +14,54 @@ platforms = ["linux", "macos"]
 # but a pane opened with an explicit cwd runs there instead. Resolve the script
 # through HERDR_PLUGIN_ROOT so both paths work and Freebuff still starts in the
 # pane's directory.
+#
+# Each entrypoint appears once per host family, because the launcher differs: a
+# shell script on Linux and macOS, a PowerShell script on Windows. Herdr 0.9.5
+# requires an id to be unique across the whole manifest, so the Windows entries
+# carry a `-windows` suffix; `platforms` decides which entry a host may open.
+# The status watcher is the same Node file everywhere.
 
 [[panes]]
 id = "task"
 title = "Freebuff"
 placement = "split"
+platforms = ["linux", "macos"]
 command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/scripts/launch.sh\" task"]
+
+[[panes]]
+id = "task-windows"
+title = "Freebuff"
+placement = "split"
+platforms = ["windows"]
+command = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "& \"$env:HERDR_PLUGIN_ROOT/scripts/windows/launch.ps1\" task"]
 
 [[panes]]
 id = "resume-last"
 title = "Freebuff (last chat)"
 placement = "split"
+platforms = ["linux", "macos"]
 command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/scripts/launch.sh\" resume-last"]
+
+[[panes]]
+id = "resume-last-windows"
+title = "Freebuff (last chat)"
+placement = "split"
+platforms = ["windows"]
+command = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "& \"$env:HERDR_PLUGIN_ROOT/scripts/windows/launch.ps1\" resume-last"]
 
 [[actions]]
 id = "doctor"
 title = "Freebuff: doctor"
 contexts = ["pane"]
+platforms = ["linux", "macos"]
 command = ["sh", "scripts/doctor.sh"]
+
+[[actions]]
+id = "doctor-windows"
+title = "Freebuff: doctor"
+contexts = ["pane"]
+platforms = ["windows"]
+command = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "& \"$env:HERDR_PLUGIN_ROOT/scripts/windows/doctor.ps1\""]
 
 # Herdr keybindings can only invoke plugin actions. This action opens the
 # `task` pane through the CLI, so `prefix+f` can start Freebuff directly. The
@@ -40,7 +70,14 @@ command = ["sh", "scripts/doctor.sh"]
 [[actions]]
 id = "new-task"
 title = "Freebuff: new task"
+platforms = ["linux", "macos"]
 command = ["sh", "scripts/new-task.sh"]
+
+[[actions]]
+id = "new-task-windows"
+title = "Freebuff: new task"
+platforms = ["windows"]
+command = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "& \"$env:HERDR_PLUGIN_ROOT/scripts/windows/new-task.ps1\""]
 
 # A `freebuff` you start by hand never reports itself, so Herdr cannot list it
 # as an agent. This registers the focused pane as a Freebuff agent without
@@ -58,4 +95,12 @@ command = ["sh", "scripts/new-task.sh"]
 id = "register-pane"
 title = "Freebuff: register this pane"
 contexts = ["pane"]
+platforms = ["linux", "macos"]
 command = ["sh", "scripts/register-pane.sh"]
+
+[[actions]]
+id = "register-pane-windows"
+title = "Freebuff: register this pane"
+contexts = ["pane"]
+platforms = ["windows"]
+command = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "& \"$env:HERDR_PLUGIN_ROOT/scripts/windows/register-pane.ps1\""]

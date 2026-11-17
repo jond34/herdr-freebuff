@@ -3,6 +3,34 @@
 Notable changes to `herdr-freebuff`. Versions match `version` in
 `herdr-plugin.toml` and use [semantic versioning](https://semver.org/).
 
+## 0.2.0 — 2026-11-17
+
+- Run on Windows. Every pane and action now has a PowerShell twin, and the
+  manifest claims `windows` alongside `linux` and `macos`. Herdr 0.9.5 rejects a
+  repeated id regardless of platform, so the Windows entrypoints are
+  `task-windows`, `resume-last-windows`, `doctor-windows` and
+  `register-pane-windows`; `platforms` decides which entry a host may open.
+  Entrypoints run under `-NoProfile -ExecutionPolicy Bypass`.
+- Split process inspection into `scripts/platform/`. Linux and macOS keep the
+  procfs, `ps`, and `lsof` code unchanged in one file; the watcher itself no
+  longer names a platform or reads `/proc`.
+- Bind chats without a process tree. Windows has no cheap way to see which file
+  a process holds open (a CIM query measured 370–560ms against a 500ms poll), so
+  the watcher binds the chat log written after it started and keeps that binding
+  until its writer exits. Freshness stands in for identity: a recycled process
+  ID cannot produce a log written after the pane launched.
+- `doctor` names the platform, what it can see (`seesOpenFiles`,
+  `seesProcessTable`), the resolved Node and Freebuff paths, and on Windows the
+  execution policy for every scope. Where Windows cannot enumerate processes it
+  reports `process-table-unavailable` instead of claiming there is no watcher.
+  The watcher also publishes its pane binding in the temp directory, so `doctor`
+  names the chat that pane actually bound rather than the newest one on disk.
+- `doctor` no longer guesses a chat from directory timestamps. It names one it
+  has evidence for, or reports `bindingSource: null` with a null chat id, which
+  is what a pane with no watcher and no published binding actually knows.
+- Guard script shims. Node cannot execute a `.cmd` or `.bat` directly, so a
+  Herdr or Freebuff resolved to one of those is run through `cmd.exe /d /s /c`.
+
 ## 0.1.5 — 2026-11-17
 
 - Run on macOS. The watcher no longer needs procfs: child processes, open files,
@@ -86,7 +114,7 @@ the [README](README.md#install) for a `prefix+f` keybinding.
 ### What works
 
 - Per-pane `idle`, `working`, and `blocked` state from Freebuff's chat
-  checkpoint and log, with launcher-descendant PID attribution.
+  checkpoint and log, with launcher-descendant PID tracking.
 - Herdr's native agent notifications and `herdr agent wait`.
 - Session reporting with chat ID, chat path, and a resume argv; a restarted
   pane reopens the same conversation with `--continue`.

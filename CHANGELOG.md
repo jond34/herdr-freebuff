@@ -5,10 +5,16 @@ Notable changes to `herdr-freebuff`. Versions match `version` in
 
 ## Unreleased
 
+## 0.1.3 — 2026-11-17
+
 - Open the `new-task` pane in the directory of the pane it was invoked from.
   Plugin commands run with the plugin directory as their cwd, so `prefix+f`
   used to start Freebuff in the plugin checkout, which also switched Freebuff's
-  project. The CLI form still takes `--cwd`.
+  project. The directory now comes from Herdr's invocation context
+  (`focused_pane_cwd`, then `workspace_cwd`, then the working directory). The
+  CLI form still takes `--cwd`.
+- A test pins the `new-task` action to that script, so an inline command that
+  would start Freebuff in the plugin directory again fails the suite.
 
 ## 0.1.2 — 2026-11-17
 
@@ -95,6 +101,7 @@ a plugin configuration error. See [Limits](README.md#limits).
   Esc, exit/release, two panes in one directory, named-session restart restore,
   and an isolated install from the tagged commit.
 
+[0.1.3]: https://github.com/jond34/herdr-freebuff/releases/tag/v0.1.3
 [0.1.2]: https://github.com/jond34/herdr-freebuff/releases/tag/v0.1.2
 [0.1.1]: https://github.com/jond34/herdr-freebuff/releases/tag/v0.1.1
 [0.1.0]: https://github.com/jond34/herdr-freebuff/releases/tag/v0.1.0

@@ -43,6 +43,15 @@ command = ["sh", "-c", "exec \"$HERDR_BIN_PATH\" plugin pane open --plugin freeb
 # A `freebuff` you start by hand never reports itself, so Herdr cannot list it
 # as an agent. This registers the focused pane as a Freebuff agent without
 # claiming a status.
+#
+# Why Herdr cannot detect it instead: Herdr names an agent from the pane's
+# foreground command text and looks that name up in a closed `Agent` enum
+# (`src/detect/mod.rs` in Herdr). Detection manifests only supply state rules
+# for a kind that already exists in that enum, and local overrides
+# (`~/.config/herdr/agent-detection/<agent>.toml`) cannot add a kind. Freebuff
+# is not in the enum, so no manifest can make Herdr recognise it. Automatic
+# detection needs an upstream Herdr change; see the README section "Why this is
+# manual".
 [[actions]]
 id = "register-pane"
 title = "Freebuff: register this pane"

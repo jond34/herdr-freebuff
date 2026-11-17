@@ -111,6 +111,30 @@ must carry a `--seq` greater than the one Herdr last accepted for that source;
 the script handles this with a microsecond timestamp, so do not hand-write a
 smaller number.
 
+### Why this is manual
+
+Herdr identifies an agent from the pane's foreground command text, then looks
+that name up in a closed list of built-in agent kinds (`Agent` in
+`src/detect/mod.rs`). Detection manifests carry state rules for a kind in that
+list, and a local override under `~/.config/herdr/agent-detection/` can only
+shadow a kind that already exists. Freebuff is not one of them, so on Herdr
+0.9.5 there is nothing a manifest, an override, or this plugin can add that
+makes Herdr recognise `freebuff` on its own.
+
+What would change that, in order of value:
+
+1. **Herdr adds Freebuff as a built-in agent kind** — an enum variant plus a
+   bundled manifest. The manifest needs either screen rules (fragile, and it
+   duplicates what this plugin already knows from Freebuff's own logs) or a
+   detection-only entry that recognises the pane without claiming a state.
+2. **Freebuff reports its own lifecycle** — hooks that send idle / working /
+   blocked and the chat ID to Herdr's socket, the way OpenCode, Kimi, and Droid
+   integrations do. That gives real state, not scraped state, and needs both
+   Freebuff and Herdr to ship a side of it.
+
+Until one of those lands, the honest maximum is what this section describes: a
+pane Herdr lists, with state left `unknown`.
+
 ## Limits
 
 This is a **self-reported agent**, not a built-in Herdr agent kind. Herdr 0.9.5

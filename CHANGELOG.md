@@ -5,6 +5,17 @@ Notable changes to `herdr-freebuff`. Versions match `version` in
 
 ## Unreleased
 
+## 0.1.2 — 2026-11-17
+
+- Fix `register-pane` where `date +%3N` does not return milliseconds. uutils
+  coreutils ignores the width and returns nanoseconds, so the microsecond `--seq`
+  overflowed to a negative number and Herdr silently dropped every report. The
+  seq now comes from Node, the same `Date.now() * 1000` clock the watcher uses.
+- Rename the test suites after their subjects (`watcher.test.js`,
+  `register-pane.test.js`) so the repository reads the same to someone who did
+  not plan the work. CI now fails if a tracked file mentions a planning phase or
+  points at a gitignored path.
+
 ## 0.1.1 — 2026-11-16
 
 - Add a `new-task` action so `prefix+f` can open the `task` pane. Herdr 0.9.5
@@ -78,5 +89,6 @@ a plugin configuration error. See [Limits](README.md#limits).
   Esc, exit/release, two panes in one directory, named-session restart restore,
   and an isolated install from the tagged commit.
 
+[0.1.2]: https://github.com/jond34/herdr-freebuff/releases/tag/v0.1.2
 [0.1.1]: https://github.com/jond34/herdr-freebuff/releases/tag/v0.1.1
 [0.1.0]: https://github.com/jond34/herdr-freebuff/releases/tag/v0.1.0

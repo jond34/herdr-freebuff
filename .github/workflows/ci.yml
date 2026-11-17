@@ -45,3 +45,17 @@ jobs:
             echo "absolute home path in tracked files" >&2
             exit 1
           fi
+
+      # The repository is the artifact: planning vocabulary and pointers to
+      # gitignored files mean nothing to someone who cloned it.
+      - name: Shipped files carry no internal jargon
+        run: |
+          set -eu
+          if git grep -nIE 'phase[ _-]?[0-9]|\bP[1-9]\b' -- . ':!*.yml'; then
+            echo "planning vocabulary in a tracked file" >&2
+            exit 1
+          fi
+          if git grep -nIE 'PLAN\.md|scratch/' -- . ':!*.yml' ':!.gitignore'; then
+            echo "reference to an unpublished path in a tracked file" >&2
+            exit 1
+          fi

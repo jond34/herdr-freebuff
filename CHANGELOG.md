@@ -3,6 +3,14 @@
 Notable changes to `herdr-freebuff`. Versions match `version` in
 `herdr-plugin.toml` and use [semantic versioning](https://semver.org/).
 
+## 0.1.5 — 2026-11-17
+
+- Run on macOS. The watcher no longer needs procfs: child processes, open files,
+  environment and the `doctor` scan fall back to `ps` and `lsof`, and the test
+  suite runs on a macOS runner in CI. Linux still takes the procfs path first.
+- Match a chat directory whose path is reported resolved. macOS resolves `/var`
+  to `/private/var`, so `lsof` names never matched the projects root before.
+
 ## Unreleased
 
 - Verified session restore end to end. Stopping and restarting the Herdr 0.9.5

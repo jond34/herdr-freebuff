@@ -80,7 +80,7 @@ The `[keys]` table has to come before any `[[keys.command]]` entry.
 |---|---|
 | Herdr 0.9.5 | the `herdr` TUI only, not `herdr-app`/`herdr-core`; validated only on 0.9.5, and `min_herdr_version` refuses anything older. The app's agent list holds only programs that emit [OSC 7501](https://herdr.dev/core), which Freebuff does not |
 | Freebuff 0.2.36 | validated; other 0.2.x releases are best-effort |
-| Linux or WSL2 | Herdr and Freebuff must run in the same distro |
+| Linux, WSL2, or macOS | On WSL2, Herdr and Freebuff must run in the same distro. macOS passes the test suite in CI, including the process inspection the watcher does without procfs; it has not been walked by hand against a real Freebuff pane yet |
 | Node.js 22+ | runs the background watcher |
 
 ## What works

@@ -34,11 +34,13 @@ contexts = ["pane"]
 command = ["sh", "scripts/doctor.sh"]
 
 # Herdr keybindings can only invoke plugin actions. This action opens the
-# `task` pane through the CLI, so `prefix+f` can start Freebuff directly.
+# `task` pane through the CLI, so `prefix+f` can start Freebuff directly. The
+# script passes the invoking pane's directory as --cwd, because plugin commands
+# otherwise run in the plugin directory and Freebuff would key its chats there.
 [[actions]]
 id = "new-task"
 title = "Freebuff: new task"
-command = ["sh", "-c", "exec \"$HERDR_BIN_PATH\" plugin pane open --plugin freebuff.integration --entrypoint task --placement split --focus"]
+command = ["sh", "scripts/new-task.sh"]
 
 # A `freebuff` you start by hand never reports itself, so Herdr cannot list it
 # as an agent. This registers the focused pane as a Freebuff agent without

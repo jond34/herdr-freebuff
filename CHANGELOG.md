@@ -5,6 +5,11 @@ Notable changes to `herdr-freebuff`. Versions match `version` in
 
 ## Unreleased
 
+- Open the `new-task` pane in the directory of the pane it was invoked from.
+  Plugin commands run with the plugin directory as their cwd, so `prefix+f`
+  used to start Freebuff in the plugin checkout, which also switched Freebuff's
+  project. The CLI form still takes `--cwd`.
+
 ## 0.1.2 — 2026-11-17
 
 - Fix `register-pane` where `date +%3N` does not return milliseconds. uutils

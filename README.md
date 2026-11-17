@@ -45,6 +45,10 @@ the CLI:
 herdr plugin pane open --plugin freebuff.integration --entrypoint task
 ```
 
+The pane opens in the directory of the pane you invoke it from, so Freebuff
+starts in that project. Pass `--cwd <dir>` to the CLI form to start somewhere
+else.
+
 If `prefix+f` does nothing at all, check that the prefix itself reaches Herdr:
 press `prefix+?`. Editors and terminals that bind `ctrl+b` (VS Code toggles its
 sidebar with it) swallow the prefix before Herdr sees it. Accept a second,

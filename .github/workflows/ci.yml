@@ -24,12 +24,14 @@ jobs:
           sh -n scripts/common.sh
           sh -n scripts/launch.sh
           sh -n scripts/doctor.sh
+          sh -n scripts/new-task.sh
           sh -n tests/run.sh
 
       - name: JavaScript syntax
         run: |
           node --check scripts/status-watcher.js
           node --check tests/watcher.test.js
+          node --check tests/new-task.test.js
 
       - name: Watcher tests
         run: sh tests/run.sh

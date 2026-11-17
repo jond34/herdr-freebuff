@@ -5,11 +5,11 @@ Notable changes to `herdr-freebuff`. Versions match `version` in
 
 ## Unreleased
 
-- Correct the session-restore claim. A restarted Herdr 0.9.5 server reopens a
-  restored plugin pane from its entrypoint, so the pane starts a new chat even
-  though the watcher reports a resume command, and even with
-  `[session] resume_agents_on_restore = true`. The README, the manifest
-  description, and the `Session` row now say that and point at `resume-last`.
+- Verified session restore end to end. Stopping and restarting the Herdr 0.9.5
+  server re-runs the reported resume command (`freebuff --continue <chat>`), and
+  the pane reopens on the previous conversation. Freebuff creates a fresh chat
+  directory for the resumed session, so the bound chat ID changes while the
+  conversation continues.
 
 ## 0.1.4 — 2026-11-17
 

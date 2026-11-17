@@ -2,7 +2,7 @@ id = "freebuff.integration"
 name = "Freebuff"
 version = "0.1.4"
 min_herdr_version = "0.9.5"
-description = "Launch Freebuff inside Herdr with lifecycle state and chat attribution."
+description = "Launch Freebuff inside Herdr with lifecycle, chat attribution, and session restore."
 platforms = ["linux"]
 
 # Freebuff's TUI needs a real PTY, so it runs in a plugin pane rather than an

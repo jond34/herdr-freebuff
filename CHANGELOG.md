@@ -3,6 +3,13 @@
 Notable changes to `herdr-freebuff`. Versions match `version` in
 `herdr-plugin.toml` and use [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Add a `new-task` action so `prefix+f` can open the `task` pane. Herdr 0.9.5
+  keybindings dispatch plugin actions only, never panes.
+- Correct the install instructions; the previous snippet used an invalid
+  keybinding type and could not bind.
+
 ## 0.1.0 — 2026-11-16
 
 First public release. Freebuff runs in Herdr plugin panes and reports itself as

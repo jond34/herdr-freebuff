@@ -7,7 +7,7 @@ platforms = ["linux"]
 
 # Freebuff's TUI needs a real PTY, so it runs in a plugin pane rather than an
 # action or CLI call. Herdr keybindings can only invoke plugin actions, not
-# panes, so open it with:
+# panes, so the `new-task` action below opens the pane for `prefix+f`:
 #   herdr plugin pane open --plugin freebuff.integration --entrypoint task
 
 # Commands normally run with the plugin directory as their working directory,
@@ -32,3 +32,10 @@ id = "doctor"
 title = "Freebuff: doctor"
 contexts = ["pane"]
 command = ["sh", "scripts/doctor.sh"]
+
+# Herdr keybindings can only invoke plugin actions. This action opens the
+# `task` pane through the CLI, so `prefix+f` can start Freebuff directly.
+[[actions]]
+id = "new-task"
+title = "Freebuff: new task"
+command = ["sh", "-c", "exec \"$HERDR_BIN_PATH\" plugin pane open --plugin freebuff.integration --entrypoint task --placement split --focus"]

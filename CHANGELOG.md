@@ -14,7 +14,9 @@ a self-reported agent.
 herdr plugin install jond34/herdr-freebuff
 ```
 
-Bind the `task` pane with `prefix+f`; see the [README](README.md#install).
+Open the `task` pane with
+`herdr plugin pane open --plugin freebuff.integration --entrypoint task`; see
+the [README](README.md#install) for a `prefix+f` keybinding.
 
 ### What works
 

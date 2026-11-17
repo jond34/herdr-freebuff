@@ -25,17 +25,25 @@ A pinned install stays on its ref; a default install picks up new commits on
 `main` when you run `herdr plugin update`. There is no setup step, PATH change,
 or launcher replacement.
 
-Bind the `task` pane to a key in `~/.config/herdr/config.toml`:
+Open a pane:
+
+```sh
+herdr plugin pane open --plugin freebuff.integration --entrypoint task
+```
+
+Herdr 0.9.5 keybindings can only invoke plugin actions, and this plugin
+ships a pane, so there is no default key. To add one, wrap the command above
+as a shell command in `~/.config/herdr/config.toml`:
 
 ```toml
 [[keys.command]]
 key = "prefix+f"
-type = "plugin_pane"
-command = "freebuff.integration.task"
+type = "shell"
+command = "\"$HERDR_BIN_PATH\" plugin pane open --plugin freebuff.integration --entrypoint task --placement split --focus"
 description = "Freebuff: new task"
 ```
 
-Reload Herdr, press `prefix+f`, and Freebuff starts in a real PTY.
+Run `herdr server reload-config`, then press `prefix+f`.
 
 ### Requirements
 
@@ -55,7 +63,7 @@ Reload Herdr, press `prefix+f`, and Freebuff starts in a real PTY.
 | `herdr agent wait` | waits on the reported state like any other agent |
 | Session restore | reports chat ID, chat path, and a resume argv, so a restarted pane reopens the same conversation |
 | `doctor` | pane action that prints the watcher, launcher, and child PIDs, the bound chat, and the resume argv |
-| Panes | `task` and `resume-last` entrypoints, plus the `prefix+f` keybinding above |
+| Panes | `task` and `resume-last` entrypoints, opened with `herdr plugin pane open` (see [Install](#install)) |
 
 Each pane binds its own Freebuff chat by process tree, so two panes in the same
 project stay independent.
@@ -69,7 +77,7 @@ gives self-reported agents a smaller command surface than built-in kinds:
 |---|---|---|
 | `herdr agent prompt` | Unavailable | Type into the Freebuff pane directly |
 | `herdr agent send-keys` | Unavailable | Send keys to the pane directly |
-| `herdr agent start --kind` | Unavailable | Use the `task` or `resume-last` pane, or the `prefix+f` keybinding |
+| `herdr agent start --kind` | Unavailable | Use the `task` or `resume-last` pane |
 | `herdr agent explain` | Unavailable | Use the `doctor` action for process and chat evidence |
 
 `herdr pane send-text` can write into the pane, but it lacks the native

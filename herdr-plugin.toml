@@ -6,12 +6,9 @@ description = "Launch Freebuff inside Herdr with lifecycle, chat attribution, an
 platforms = ["linux"]
 
 # Freebuff's TUI needs a real PTY, so it runs in a plugin pane rather than an
-# action or CLI call. Bind this entrypoint to a key in the Herdr config:
-#   [[keys.command]]
-#   key = "prefix+f"
-#   type = "plugin_pane"
-#   command = "freebuff.integration.task"
-#   description = "Freebuff: new task"
+# action or CLI call. Herdr keybindings can only invoke plugin actions, not
+# panes, so open it with:
+#   herdr plugin pane open --plugin freebuff.integration --entrypoint task
 
 # Commands normally run with the plugin directory as their working directory,
 # but a pane opened with an explicit cwd runs there instead. Resolve the script

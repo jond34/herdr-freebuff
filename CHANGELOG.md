@@ -3,8 +3,6 @@
 Notable changes to `herdr-freebuff`. Versions match `version` in
 `herdr-plugin.toml` and use [semantic versioning](https://semver.org/).
 
-## Unreleased
-
 ## 0.1.4 — 2026-11-17
 
 - Do not hand Herdr a directory that no longer exists. Herdr opens the pane at

@@ -11,10 +11,10 @@ after a Herdr restart.
 
 ## Screenshots
 
-| Started by hand in a pane | Opened by the plugin |
-|---|---|
-| ![Freebuff running in a plain Herdr pane, agents list empty](docs/screenshots/01-plain-pane-no-agent.png) | ![Freebuff in a plugin pane beside a shell, listed under agents](docs/screenshots/02-plugin-pane-registered.png) |
-| Herdr reads the foreground command as `freebuff`, has no built-in kind by that name, and lists nothing. | The plugin reports the pane over the socket API, so the sidebar lists it and carries its state. |
+| Started by hand in a pane | Opened by the plugin | Pane beside it closed |
+|---|---|---|
+| ![Freebuff running in a plain Herdr pane, agents list empty](docs/screenshots/01-plain-pane-no-agent.png) | ![Freebuff in a plugin pane beside a shell, listed under agents](docs/screenshots/02-plugin-pane-registered.png) | ![Freebuff alone in a tab, still listed under agents](docs/screenshots/03-extra-pane-closed.png) |
+| Herdr reads the foreground command as `freebuff`, has no built-in kind by that name, and lists nothing. | The plugin reports the pane over the socket API, so the sidebar lists it and carries its state. | Closing the pane beside it leaves the `freebuff` entry in place; only the Freebuff pane itself owns that entry. |
 
 ## Install
 
@@ -22,10 +22,10 @@ after a Herdr restart.
 herdr plugin install jond34/herdr-freebuff
 ```
 
-That tracks `main`. To pin the reviewed release instead:
+That tracks `main`. To pin the current release instead:
 
 ```sh
-herdr plugin install jond34/herdr-freebuff --ref v0.1.2
+herdr plugin install jond34/herdr-freebuff --ref v0.1.4
 ```
 
 A pinned install stays on its ref; a default install picks up new commits on
@@ -78,7 +78,7 @@ The `[keys]` table has to come before any `[[keys.command]]` entry.
 
 | Requirement | Notes |
 |---|---|
-| Herdr 0.9.5+ | the `herdr` TUI only, not `herdr-app`/`herdr-core`; validated on 0.9.5, 0.9.2–0.9.4 untested. The app's agent list holds only programs that emit [OSC 7501](https://herdr.dev/core), which Freebuff does not |
+| Herdr 0.9.5 | the `herdr` TUI only, not `herdr-app`/`herdr-core`; validated only on 0.9.5, and `min_herdr_version` refuses anything older. The app's agent list holds only programs that emit [OSC 7501](https://herdr.dev/core), which Freebuff does not |
 | Freebuff 0.2.36 | validated; other 0.2.x releases are best-effort |
 | Linux or WSL2 | Herdr and Freebuff must run in the same distro |
 | Node.js 22+ | runs the background watcher |
@@ -97,6 +97,11 @@ The `[keys]` table has to come before any `[[keys.command]]` entry.
 
 Each pane binds its own Freebuff chat by process tree, so two panes in the same
 project stay independent.
+
+Tested: state transitions, two-pane isolation, resume arguments, and `doctor`.
+Not walked end to end: a real quit-and-restart reopen — the resume argv is
+tested, the round trip is not — and notifications, which are Herdr's own
+response to a reported state rather than a second path this plugin adds.
 
 ## Panes you start yourself
 

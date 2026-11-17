@@ -45,6 +45,24 @@ the CLI:
 herdr plugin pane open --plugin freebuff.integration --entrypoint task
 ```
 
+If `prefix+f` does nothing at all, check that the prefix itself reaches Herdr:
+press `prefix+?`. Editors and terminals that bind `ctrl+b` (VS Code toggles its
+sidebar with it) swallow the prefix before Herdr sees it. Accept a second,
+unclaimed prefix and keep both:
+
+```toml
+[keys]
+prefix = ["ctrl+b", "ctrl+space"]
+
+[[keys.command]]
+key = "prefix+f"
+type = "plugin_action"
+command = "freebuff.integration.new-task"
+description = "Freebuff: new task"
+```
+
+The `[keys]` table has to come before any `[[keys.command]]` entry.
+
 ### Requirements
 
 | Requirement | Notes |
@@ -63,10 +81,35 @@ herdr plugin pane open --plugin freebuff.integration --entrypoint task
 | `herdr agent wait` | waits on the reported state like any other agent |
 | Session restore | reports chat ID, chat path, and a resume argv, so a restarted pane reopens the same conversation |
 | `doctor` | pane action that prints the watcher, launcher, and child PIDs, the bound chat, and the resume argv |
+| `register-pane` | pane action that lists a pane you started yourself as a Freebuff agent (see [Panes you start yourself](#panes-you-start-yourself)) |
 | Panes | `task` and `resume-last` entrypoints, plus the `new-task` action behind `prefix+f` (see [Install](#install)) |
 
 Each pane binds its own Freebuff chat by process tree, so two panes in the same
 project stay independent.
+
+## Panes you start yourself
+
+Herdr knows about a Freebuff pane because something reports it. The plugin's
+watcher does that for panes it opened. A `freebuff` you type into a plain pane
+reports nothing, so Herdr lists it as `unknown` and the sidebar stays empty.
+
+Register that pane once Freebuff is running in it, and it appears as an agent:
+
+```sh
+herdr pane report-agent w1:p2 --source freebuff --agent freebuff --state unknown
+```
+
+Inside Herdr, the `Freebuff: register this pane` action does the same for the
+focused pane. It registers the pane with state `unknown` and claims nothing
+else: nothing watches that session, so its entry does not follow
+`working` / `blocked` and stays until the pane closes. Starting Freebuff as a
+plugin pane gets you the live state instead.
+
+Two details matter. Register while Freebuff is in the foreground: Herdr drops a
+self-reported agent from a pane that has returned to its shell. And every report
+must carry a `--seq` greater than the one Herdr last accepted for that source;
+the script handles this with a microsecond timestamp, so do not hand-write a
+smaller number.
 
 ## Limits
 

@@ -9,6 +9,12 @@ Notable changes to `herdr-freebuff`. Versions match `version` in
   keybindings dispatch plugin actions only, never panes.
 - Correct the install instructions; the previous snippet used an invalid
   keybinding type and could not bind.
+- Add a `register-pane` action and `scripts/register-pane.sh`, which list a pane
+  you started yourself as a Freebuff agent with state `unknown`. Herdr 0.9.5
+  cannot detect Freebuff on its own, so a hand-started session is otherwise
+  invisible in the agent list.
+- Document the second-prefix fallback for terminals and editors that swallow
+  `ctrl+b`.
 
 ## 0.1.0 — 2026-11-16
 

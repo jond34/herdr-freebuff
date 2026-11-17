@@ -39,3 +39,12 @@ command = ["sh", "scripts/doctor.sh"]
 id = "new-task"
 title = "Freebuff: new task"
 command = ["sh", "-c", "exec \"$HERDR_BIN_PATH\" plugin pane open --plugin freebuff.integration --entrypoint task --placement split --focus"]
+
+# A `freebuff` you start by hand never reports itself, so Herdr cannot list it
+# as an agent. This registers the focused pane as a Freebuff agent without
+# claiming a status.
+[[actions]]
+id = "register-pane"
+title = "Freebuff: register this pane"
+contexts = ["pane"]
+command = ["sh", "scripts/register-pane.sh"]

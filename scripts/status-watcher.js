@@ -231,22 +231,74 @@ function readChildren(pid) {
       .map(Number)
       .filter((value) => Number.isInteger(value) && value > 0)
   } catch {
-    try {
-      const out = execFileSync(
-        'ps',
-        ['-o', 'pid=', '--ppid', String(pid)],
-        { encoding: 'utf8', timeout: 1000, stdio: ['ignore', 'pipe', 'ignore'] },
-      )
-      return out
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean)
-        .map(Number)
-        .filter((value) => Number.isInteger(value) && value > 0)
-    } catch {
-      return []
-    }
+    return childrenByPs(pid)
   }
+}
+
+// Without procfs (macOS) one ps call answers the whole parent/child map, and
+// `-A -o pid=,ppid=` is accepted by both BSD and GNU ps. The table is cached for
+// longer than a refresh cycle so a deep tree costs one call.
+let psTreeCache = { at: 0, rows: [] }
+
+function psTreeRows() {
+  const now = Date.now()
+  if (now - psTreeCache.at < 500 && psTreeCache.rows.length) return psTreeCache.rows
+  let out
+  try {
+    out = execFileSync('ps', ['-A', '-o', 'pid=,ppid='], {
+      encoding: 'utf8',
+      timeout: 1000,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+  } catch {
+    return []
+  }
+  const rows = out
+    .trim()
+    .split('\n')
+    .map((line) => line.trim().split(/\s+/).map(Number))
+    .filter((cols) => cols.length === 2 && cols.every(Number.isInteger))
+  psTreeCache = { at: now, rows }
+  return rows
+}
+
+function childrenByPs(pid) {
+  return psTreeRows()
+    .filter(([, parent]) => parent === pid)
+    .map(([child]) => child)
+    .filter((value) => Number.isInteger(value) && value > 0)
+}
+
+// Open file targets for a process. procfs answers directly; macOS has no
+// procfs, and lsof reports the same open-file table (`-F n` gives one name per
+// line). A missing lsof is not fatal: attribution falls back to the pid scan.
+function fdTargets(pid) {
+  const dir = `/proc/${pid}/fd`
+  try {
+    const targets = []
+    for (const fd of fs.readdirSync(dir)) {
+      try {
+        targets.push(fs.readlinkSync(`${dir}/${fd}`))
+      } catch {}
+    }
+    return targets
+  } catch {}
+  // PATH from a Herdr-spawned process does not always include /usr/sbin, where
+  // macOS keeps lsof.
+  for (const bin of ['lsof', '/usr/sbin/lsof']) {
+    try {
+      const out = execFileSync(bin, ['-w', '-p', String(pid), '-Fn'], {
+        encoding: 'utf8',
+        timeout: 2000,
+        stdio: ['ignore', 'pipe', 'ignore'],
+      })
+      return out
+        .split('\n')
+        .filter((line) => line.startsWith('n') && line.length > 1)
+        .map((line) => line.slice(1))
+    } catch {}
+  }
+  return []
 }
 
 function collectDescendants(rootPid, found = new Set(), depth = 0) {
@@ -300,24 +352,20 @@ function logTailHasActivePid(chatDir, pids = activePids) {
 
 function chatDirByProcFd(pids = activePids) {
   const root = projectsRoot()
+  // lsof on macOS reports resolved paths, and /var is a symlink to /private/var,
+  // so the projects root has to be matched in both forms.
+  const roots = [root]
+  try {
+    const resolved = fs.realpathSync(root)
+    if (resolved !== root) roots.push(resolved)
+  } catch {}
   let best = ''
   let bestMtime = 0
   for (const pid of pids) {
-    let fds
-    try {
-      fds = fs.readdirSync(`/proc/${pid}/fd`)
-    } catch {
-      continue
-    }
-    for (const fd of fds) {
-      let target
-      try {
-        target = fs.readlinkSync(`/proc/${pid}/fd/${fd}`)
-      } catch {
-        continue
-      }
-      if (!target.startsWith(root + path.sep)) continue
-      const segments = target.slice(root.length + 1).split(path.sep)
+    for (const target of fdTargets(pid)) {
+      const matched = roots.find((candidate) => target.startsWith(candidate + path.sep))
+      if (!matched) continue
+      const segments = target.slice(matched.length + 1).split(path.sep)
       if (segments.length < 4 || segments[1] !== 'chats') continue
       const dir = path.join(root, segments[0], 'chats', segments[2])
       if (!isDirectory(dir)) continue
@@ -806,7 +854,23 @@ function processEnv(pid, name) {
   try {
     text = fs.readFileSync(`/proc/${pid}/environ`, 'utf8')
   } catch {
-    return null
+    // macOS: `ps -E` appends the environment to the command line. Values there
+    // are space-separated, which is enough for the socket path this reads.
+    try {
+      text = execFileSync('ps', ['-E', '-p', String(pid)], {
+        encoding: 'utf8',
+        timeout: 1000,
+        stdio: ['ignore', 'pipe', 'ignore'],
+      })
+    } catch {
+      return null
+    }
+    const flattened = text.replace(/\n/g, ' ')
+    const at = flattened.indexOf(` ${name}=`)
+    if (at < 0) return null
+    const rest = flattened.slice(at + name.length + 2)
+    const end = rest.search(/\s/)
+    return end < 0 ? rest : rest.slice(0, end)
   }
   for (const entry of text.split('\0')) {
     const equals = entry.indexOf('=')
@@ -815,6 +879,43 @@ function processEnv(pid, name) {
     }
   }
   return null
+}
+
+// Every visible process with its argv. procfs answers directly; without procfs
+// (macOS) one ps call gives the same table.
+function processArgvTable() {
+  const rows = []
+  try {
+    for (const entry of fs.readdirSync('/proc')) {
+      if (!/^\d+$/.test(entry)) continue
+      const pid = Number(entry)
+      try {
+        if (fs.statSync(`/proc/${entry}`).uid !== process.getuid()) continue
+      } catch {
+        continue
+      }
+      try {
+        rows.push({
+          pid,
+          args: fs.readFileSync(`/proc/${entry}/cmdline`, 'utf8').split('\0').filter(Boolean),
+        })
+      } catch {}
+    }
+    if (rows.length) return rows
+  } catch {}
+  try {
+    const out = execFileSync('ps', ['-A', '-o', 'pid=,command='], {
+      encoding: 'utf8',
+      timeout: 2000,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+    for (const line of out.trim().split('\n')) {
+      const match = line.trim().match(/^(\d+)\s+(.*)$/)
+      if (!match) continue
+      rows.push({ pid: Number(match[1]), args: match[2].split(/\s+/) })
+    }
+  } catch {}
+  return rows
 }
 
 // The doctor action is invoked with only Herdr's pane context. Find the
@@ -832,31 +933,9 @@ function findWatcherForPane(paneId) {
     sessionIdentity,
   }
   if (!paneId) return { ...result, reason: 'no-pane' }
-  let entries
-  try {
-    entries = fs.readdirSync('/proc')
-  } catch {
-    return result
-  }
   const script = path.join(PLUGIN_ROOT, 'scripts', 'status-watcher.js')
-  for (const entry of entries) {
-    if (!/^\d+$/.test(entry)) continue
-    const pid = Number(entry)
+  for (const { pid, args } of processArgvTable()) {
     if (!pidAlive(pid)) continue
-    try {
-      if (fs.statSync(`/proc/${entry}`).uid !== process.getuid()) continue
-    } catch {
-      continue
-    }
-    let args
-    try {
-      args = fs
-        .readFileSync(`/proc/${entry}/cmdline`, 'utf8')
-        .split('\0')
-        .filter(Boolean)
-    } catch {
-      continue
-    }
     const scriptIndex = args.indexOf(script)
     if (scriptIndex < 0 || args[scriptIndex + 2] !== paneId) continue
     const launcherPid = Number(args[scriptIndex + 1])

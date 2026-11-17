@@ -9,6 +9,13 @@ pane and let Herdr see it: live `idle` / `working` / `blocked` state in the
 sidebar, native notifications, `herdr agent wait`, and conversation restore
 after a Herdr restart.
 
+## Screenshots
+
+| Started by hand in a pane | Opened by the plugin |
+|---|---|
+| ![Freebuff running in a plain Herdr pane, agents list empty](docs/screenshots/01-plain-pane-no-agent.png) | ![Freebuff in a plugin pane beside a shell, listed under agents](docs/screenshots/02-plugin-pane-registered.png) |
+| Herdr reads the foreground command as `freebuff`, has no built-in kind by that name, and lists nothing. | The plugin reports the pane over the socket API, so the sidebar lists it and carries its state. |
+
 ## Install
 
 ```sh

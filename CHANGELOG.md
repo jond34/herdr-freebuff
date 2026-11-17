@@ -3,6 +3,14 @@
 Notable changes to `herdr-freebuff`. Versions match `version` in
 `herdr-plugin.toml` and use [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Correct the session-restore claim. A restarted Herdr 0.9.5 server reopens a
+  restored plugin pane from its entrypoint, so the pane starts a new chat even
+  though the watcher reports a resume command, and even with
+  `[session] resume_agents_on_restore = true`. The README, the manifest
+  description, and the `Session` row now say that and point at `resume-last`.
+
 ## 0.1.4 — 2026-11-17
 
 - Do not hand Herdr a directory that no longer exists. Herdr opens the pane at

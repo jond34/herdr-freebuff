@@ -6,8 +6,8 @@
 
 Run [Freebuff](https://freebuff.com) in a [Herdr](https://herdr.dev) plugin
 pane and let Herdr see it: live `idle` / `working` / `blocked` state in the
-sidebar, native notifications, `herdr agent wait`, and conversation restore
-after a Herdr restart.
+sidebar, native notifications, `herdr agent wait`, and a `resume-last` pane that
+continues the previous conversation.
 
 ## Screenshots
 
@@ -90,7 +90,7 @@ The `[keys]` table has to come before any `[[keys.command]]` entry.
 | State | `idle`, `working`, and `blocked` reported per pane, derived from Freebuff's own chat checkpoint and log rather than screen scraping |
 | Notifications | Herdr's native agent notifications; the plugin adds no second notification path |
 | `herdr agent wait` | waits on the reported state like any other agent |
-| Session restore | reports chat ID, chat path, and a resume argv, so a restarted pane reopens the same conversation |
+| Session | reports the chat ID, chat path, and a resume command; Herdr 0.9.5 stores that command but reopens a restored plugin pane from its entrypoint, so the pane starts a new chat and `resume-last` is how you continue the previous one |
 | `doctor` | pane action that prints the watcher, launcher, and child PIDs, the bound chat, and the resume argv |
 | `register-pane` | pane action that lists a pane you started yourself as a Freebuff agent (see [Panes you start yourself](#panes-you-start-yourself)) |
 | Panes | `task` and `resume-last` entrypoints, plus the `new-task` action behind `prefix+f` (see [Install](#install)) |
@@ -98,10 +98,13 @@ The `[keys]` table has to come before any `[[keys.command]]` entry.
 Each pane binds its own Freebuff chat by process tree, so two panes in the same
 project stay independent.
 
-Tested: state transitions, two-pane isolation, resume arguments, and `doctor`.
-Not walked end to end: a real quit-and-restart reopen — the resume argv is
-tested, the round trip is not — and notifications, which are Herdr's own
-response to a reported state rather than a second path this plugin adds.
+Tested in the suite: state transitions, two-pane isolation, the resume
+arguments, and `doctor`. Walked by hand on Herdr 0.9.5: restarting the server
+reopens the plugin pane by re-running its entrypoint, so the pane starts a new
+chat even though the reported resume command is stored, and even with
+`[session] resume_agents_on_restore = true`. Continuing a conversation therefore
+means the `resume-last` pane. Notifications are Herdr's own response to a
+reported state, not a second path this plugin adds.
 
 ## Panes you start yourself
 
@@ -168,7 +171,7 @@ foreground-agent guard and is not equivalent to `agent prompt`; this plugin
 does not wrap it, seed a detection override, or use a fake agent label.
 
 The rest of the surface above does work: state reporting, notifications,
-`herdr agent wait`, session restore, and `doctor`. Native parity needs a Herdr
+`herdr agent wait`, the reported resume command, and `doctor`. Native parity needs a Herdr
 change; see [herdrdev/herdr discussion #4832](https://github.com/herdrdev/herdr/discussions/4832).
 
 ## Trust

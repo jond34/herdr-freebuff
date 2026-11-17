@@ -112,7 +112,10 @@ wait "$child"
       }
     }
     await sleep(300)
-    fs.rmSync(root, { recursive: true, force: true })
+    // A pane that is still finishing its exit can create a file between the
+    // readdir and the rmdir, so let the removal retry instead of failing the
+    // test that already passed its assertions.
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 })
   })
 
   return ctx

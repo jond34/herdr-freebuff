@@ -36,7 +36,9 @@ const PANE = 'w1:pA'
 
 function sandbox(t) {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'herdr-bind-')))
-  t.after(() => fs.rmSync(root, { recursive: true, force: true }))
+  t.after(() =>
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 }),
+  )
   const box = {
     configDir: path.join(root, 'manicode'),
     projectName: 'project-a',

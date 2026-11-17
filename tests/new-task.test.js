@@ -20,15 +20,7 @@ function setup(t) {
     stub,
     `#!/usr/bin/env node
 'use strict'
-const fs = require('fs')
-const args = process.argv.slice(2)
-fs.appendFileSync(process.env.HERDR_STUB_LOG, JSON.stringify(args) + '\\n')
-if (args[0] === 'pane' && args[1] === 'get') {
-  if (process.env.HERDR_STUB_FAIL) process.exit(1)
-  const pane = { pane_id: args[2], cwd: process.env.HERDR_STUB_CWD }
-  if (process.env.HERDR_STUB_FG_CWD) pane.foreground_cwd = process.env.HERDR_STUB_FG_CWD
-  process.stdout.write(JSON.stringify({ id: 'cli:pane:get', result: { pane } }))
-}
+require('fs').appendFileSync(process.env.HERDR_STUB_LOG, JSON.stringify(process.argv.slice(2)) + '\\n')
 `,
   )
   fs.chmodSync(stub, 0o755)
@@ -37,7 +29,7 @@ if (args[0] === 'pane' && args[1] === 'get') {
   return { root, calls, stub }
 }
 
-function run(ctx, env = {}) {
+function run(ctx, context) {
   const result = spawnSync('sh', [SCRIPT], {
     cwd: ctx.root,
     encoding: 'utf8',
@@ -46,9 +38,7 @@ function run(ctx, env = {}) {
       HERDR_ENV: '1',
       HERDR_BIN_PATH: ctx.stub,
       HERDR_STUB_LOG: ctx.calls,
-      HERDR_ACTIVE_PANE_ID: '',
-      HERDR_PANE_ID: '',
-      ...env,
+      HERDR_PLUGIN_CONTEXT_JSON: context === undefined ? '' : JSON.stringify(context),
     },
   })
   const calls = fs
@@ -74,38 +64,30 @@ const open = (cwd) => [
   cwd,
 ]
 
-test('opens the pane where the action was invoked', (t) => {
+test('opens the pane in the focused pane directory', (t) => {
   const ctx = setup(t)
   const { result, calls } = run(ctx, {
-    HERDR_ACTIVE_PANE_ID: 'w9:p3',
-    HERDR_STUB_CWD: '/work/repo',
-    HERDR_STUB_FG_CWD: '/work/repo/packages/api',
+    focused_pane_id: 'w9:p3',
+    focused_pane_cwd: '/work/repo/packages/api',
+    workspace_cwd: '/work/repo',
   })
 
   assert.equal(result.status, 0, result.stderr)
-  assert.deepEqual(calls[0], ['pane', 'get', 'w9:p3'])
-  assert.deepEqual(calls[1], open('/work/repo/packages/api'))
+  assert.deepEqual(calls, [open('/work/repo/packages/api')])
 })
 
-test('uses the pane directory when the foreground one is missing', (t) => {
+test('falls back to the workspace directory', (t) => {
   const ctx = setup(t)
-  const { result, calls } = run(ctx, {
-    HERDR_ACTIVE_PANE_ID: 'w9:p3',
-    HERDR_STUB_CWD: '/work/repo',
-  })
+  const { result, calls } = run(ctx, { workspace_id: 'w9', workspace_cwd: '/work/repo' })
 
   assert.equal(result.status, 0, result.stderr)
-  assert.deepEqual(calls[1], open('/work/repo'))
+  assert.deepEqual(calls, [open('/work/repo')])
 })
 
-test('falls back to the working directory when the pane cannot be read', (t) => {
+test('falls back to the working directory without a context', (t) => {
   const ctx = setup(t)
-  const { result, calls } = run(ctx, {
-    HERDR_ACTIVE_PANE_ID: 'w9:p3',
-    HERDR_STUB_CWD: '/work/repo',
-    HERDR_STUB_FAIL: '1',
-  })
+  const { result, calls } = run(ctx)
 
   assert.equal(result.status, 0, result.stderr)
-  assert.deepEqual(calls[1], open(ctx.root))
+  assert.deepEqual(calls, [open(ctx.root)])
 })

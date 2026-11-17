@@ -9,8 +9,9 @@ Notable changes to `herdr-freebuff`. Versions match `version` in
 
 - Fix `register-pane` where `date +%3N` does not return milliseconds. uutils
   coreutils ignores the width and returns nanoseconds, so the microsecond `--seq`
-  overflowed to a negative number and Herdr silently dropped every report. The
-  seq now comes from Node, the same `Date.now() * 1000` clock the watcher uses.
+  overflowed to a negative number, which Herdr rejects outright, and the pane
+  never registered. The seq now comes from Node, the same `Date.now() * 1000`
+  clock the watcher uses.
 - Rename the test suites after their subjects (`watcher.test.js`,
   `register-pane.test.js`) so the repository reads the same to someone who did
   not plan the work. CI now fails if a tracked file mentions a planning phase or

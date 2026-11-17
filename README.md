@@ -67,20 +67,10 @@ The `[keys]` table has to come before any `[[keys.command]]` entry.
 
 | Requirement | Notes |
 |---|---|
-| Herdr 0.9.5+ | validated on 0.9.5; 0.9.2–0.9.4 is untested |
+| Herdr 0.9.5+ | the `herdr` TUI only, not `herdr-app`/`herdr-core`; validated on 0.9.5, 0.9.2–0.9.4 untested. The app's agent list holds only programs that emit [OSC 7501](https://herdr.dev/core), which Freebuff does not |
 | Freebuff 0.2.36 | validated; other 0.2.x releases are best-effort |
 | Linux or WSL2 | Herdr and Freebuff must run in the same distro |
 | Node.js 22+ | runs the background watcher |
-
-### Which Herdr
-
-This plugin covers the `herdr` TUI, 0.9.5 or newer. `herdr-app` and
-`herdr-core` are a separate runtime with their own agent list, and it holds only
-programs that emit [OSC 7501](https://github.com/herdrdev/herdr/discussions/5700)
-status sequences; `herdr-core` does not "guess from screen text or recognize
-agent brands". Freebuff writes terminal titles but not 7501, so a Freebuff pane
-in that runtime stays unlisted until Freebuff emits the sequences itself. This
-plugin's panes, actions, and state reporting belong to the TUI.
 
 ## What works
 

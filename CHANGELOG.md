@@ -5,6 +5,8 @@ Notable changes to `herdr-freebuff`. Versions match `version` in
 
 ## Unreleased
 
+## 0.1.4 — 2026-11-17
+
 - Do not hand Herdr a directory that no longer exists. Herdr opens the pane at
   `$HOME` in that case without reporting an error, so a pane whose directory
   was deleted (a removed worktree, a cleaned scratch directory) would file
@@ -109,6 +111,7 @@ a plugin configuration error. See [Limits](README.md#limits).
   Esc, exit/release, two panes in one directory, named-session restart restore,
   and an isolated install from the tagged commit.
 
+[0.1.4]: https://github.com/jond34/herdr-freebuff/releases/tag/v0.1.4
 [0.1.3]: https://github.com/jond34/herdr-freebuff/releases/tag/v0.1.3
 [0.1.2]: https://github.com/jond34/herdr-freebuff/releases/tag/v0.1.2
 [0.1.1]: https://github.com/jond34/herdr-freebuff/releases/tag/v0.1.1

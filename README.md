@@ -25,7 +25,7 @@ herdr plugin install jond34/herdr-freebuff
 That tracks `main`. To pin the current release instead:
 
 ```sh
-herdr plugin install jond34/herdr-freebuff --ref v0.1.5
+herdr plugin install jond34/herdr-freebuff --ref v0.2.0
 ```
 
 A pinned install stays on its ref; a default install picks up new commits on
@@ -42,6 +42,11 @@ command = "freebuff.integration.new-task"
 description = "Freebuff: new task"
 ```
 
+On Windows the id is `freebuff.integration.new-task-windows`. Herdr 0.9.5
+rejects a manifest that repeats an id, even when the entries claim different
+platforms, so every Windows entrypoint carries a `-windows` suffix
+(`task-windows`, `resume-last-windows`, `doctor-windows`, `register-pane-windows`).
+
 Run `herdr server reload-config`, then restart the Herdr client (detach with
 `prefix+q` and run `herdr` again) so it picks up the new keymap, and press
 `prefix+f`. Herdr keybindings can only invoke plugin actions, so the plugin
@@ -51,6 +56,10 @@ the CLI:
 ```sh
 herdr plugin pane open --plugin freebuff.integration --entrypoint task
 ```
+
+Ask for `--entrypoint task-windows` on Windows; asking for `task` there fails
+with `platform_unsupported` rather than running a shell script that host does
+not have.
 
 The pane opens in the directory of the pane you invoke it from, so Freebuff
 starts in that project. Pass `--cwd <dir>` to the CLI form to start somewhere
@@ -80,8 +89,8 @@ The `[keys]` table has to come before any `[[keys.command]]` entry.
 |---|---|
 | Herdr 0.9.5 | the `herdr` TUI only, not `herdr-app`/`herdr-core`; validated only on 0.9.5, and `min_herdr_version` refuses anything older. The app's agent list holds only programs that emit [OSC 7501](https://herdr.dev/core), which Freebuff does not |
 | Freebuff 0.2.36 | validated; other 0.2.x releases are best-effort |
-| Linux, WSL2, or macOS | On WSL2, Herdr and Freebuff must run in the same distro. macOS passes the test suite in CI, including the process inspection the watcher does without procfs; it has not been walked by hand against a real Freebuff pane yet |
-| Node.js 22+ | runs the background watcher |
+| Linux, WSL2, macOS, or Windows 10+ | On WSL2, Herdr and Freebuff must run in the same distro. macOS passes the test suite in CI, including the process inspection the watcher does without procfs; it has not been walked by hand against a real Freebuff pane yet. Windows runs the PowerShell entrypoints and is reported further down |
+| Node.js 22+ | runs the background watcher. Without it a pane still starts Freebuff, but the pane stays `unknown` and `doctor` exits |
 
 ## What works
 
@@ -96,7 +105,11 @@ The `[keys]` table has to come before any `[[keys.command]]` entry.
 | Panes | `task` and `resume-last` entrypoints, plus the `new-task` action behind `prefix+f` (see [Install](#install)) |
 
 Each pane binds its own Freebuff chat by process tree, so two panes in the same
-project stay independent.
+project stay independent. Windows has no process tree cheap enough to poll, so
+there the pane binds the chat log written after it launched and keeps that
+binding until its writer exits: a recycled process ID cannot produce a log
+written after the pane started. `doctor` reports what the host can see
+(`seesOpenFiles`, `seesProcessTable`) and which source named the pane's chat.
 
 Tested in the suite: state transitions, two-pane isolation, the resume
 arguments, and `doctor`. Walked by hand on Herdr 0.9.5: stopping and restarting
@@ -175,6 +188,28 @@ The rest of the surface above does work: state reporting, notifications,
 `herdr agent wait`, session restore, and `doctor`. Native parity needs a Herdr
 change; see [herdrdev/herdr discussion #4832](https://github.com/herdrdev/herdr/discussions/4832).
 
+### Windows
+
+Entrypoints are PowerShell twins of the shell scripts, run with `-NoProfile
+-ExecutionPolicy Bypass`; the watcher is the same Node file on every host.
+Their ids carry a `-windows` suffix because Herdr 0.9.5 refuses a repeated id.
+Status, notifications, session restore, and `doctor` behave as described above.
+
+Two limits are worth knowing before installing:
+
+- A Group Policy that sets execution policy for the machine or user overrides
+  the `-ExecutionPolicy Bypass` the manifest passes, and the pane closes as soon
+  as it opens. `doctor` prints the policy for every scope, so that is the first
+  thing to read. Locked-down machines are not supported.
+- Status reporting needs Node on `PATH`. The npm install of Freebuff brings it;
+  a tarball install may not, and then the pane still runs but stays `unknown`.
+
+The mechanisms were verified by hand on Windows 11 against Herdr 0.9.5 and
+Freebuff 0.2.36: pane environment, chat log shape, process liveness, TUI input,
+and a reported `working` state. The port itself has not been walked through a
+full session yet, and CI covers parsing and the binding rules rather than a live
+pane.
+
 ## Trust
 
 The plugin is a shell entrypoint plus one Node watcher, both in this repository:
@@ -196,7 +231,9 @@ sh scripts/doctor.sh [launcher-pid] [chat-id]
 ```
 
 It reports the watcher, launcher, and descendant PIDs, the bound chat directory,
-and the resume argv. It matches watchers by pane ID and inherited
+and the resume argv. On Windows it also reports `process-table-unavailable` for
+the session match, because there is no cheap process table to search there; pass
+the launcher PID explicitly instead. It matches watchers by pane ID and inherited
 `HERDR_SOCKET_PATH`, so two Herdr sessions that both use `w1:p2` do not collide;
 when identity cannot choose a candidate it reports the ambiguity instead of
 guessing.
@@ -217,13 +254,24 @@ herdr plugin action list --plugin freebuff.integration
 ```
 
 The tests drive `launch.sh` with a fake launcher/child process tree and a
-JSON-recording Herdr stub, so they exercise the real PID attribution path
+JSON-recording Herdr stub, so they exercise the real PID binding path
 without a Herdr install:
 
 ```sh
 sh tests/run.sh
 node --check scripts/status-watcher.js
 ```
+
+`scripts/status-watcher.js` reads the environment and wires four modules, each
+of which owns one decision: `watcher/binding.js` which chat this pane owns and
+where chats live, `watcher/turns.js` what state the pane is in, `watcher/herdr.js`
+the pane reports and resume argv, `watcher/doctor.js` the diagnostic report. A
+change to one of those starts there and does not need the others.
+
+`tests/platform.test.js` exercises the platform seam and the chat-binding rules
+without a pane, and `tests/manifest.test.js` asserts that every entrypoint has
+both twins and both scripts exist. CI runs the suite on Linux and macOS, and on
+`windows-latest` where a `powershell` step parses every `.ps1` file.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the fixture and data rules, and
 [CHANGELOG.md](CHANGELOG.md) for release history.
@@ -237,7 +285,7 @@ excludes forks; the original commits and attribution are preserved.
 
 The original plugin supplied the architecture, pane launch, and screen-marker
 ideas. [1024ch/herdr-freebuff-plugin](https://github.com/1024ch/herdr-freebuff-plugin)
-supplied the Node watcher, PID-bound chat attribution, incremental log tail, and
+supplied the Node watcher, PID-bound chat binding, incremental log tail, and
 checkpoint arbitration. Both are MIT licensed; see [CREDITS.md](CREDITS.md) and
 [LICENSE](LICENSE).
 

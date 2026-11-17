@@ -42,6 +42,13 @@ jobs:
       - name: JavaScript syntax
         run: |
           node --check scripts/status-watcher.js
+          node --check scripts/watcher/binding.js
+          node --check scripts/watcher/turns.js
+          node --check scripts/watcher/herdr.js
+          node --check scripts/watcher/doctor.js
+          node --check scripts/platform/index.js
+          node --check scripts/platform/unix.js
+          node --check scripts/platform/windows.js
           node --check tests/watcher.test.js
           node --check tests/new-task.test.js
 
@@ -73,3 +80,50 @@ jobs:
             echo "reference to an unpublished path in a tracked file" >&2
             exit 1
           fi
+
+  # The shell suite drives launch.sh with a fake process tree, which is the part
+  # of the plugin Windows does not have; this job covers what Windows does have:
+  # the seam, the binding rules, the manifest twins, and parsing of every
+  # PowerShell entrypoint. A live pane is not started here, because Herdr and
+  # Freebuff are not installed on the runner.
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: JavaScript syntax
+        shell: powershell
+        run: |
+          node --check scripts/status-watcher.js
+          node --check scripts/watcher/binding.js
+          node --check scripts/watcher/turns.js
+          node --check scripts/watcher/herdr.js
+          node --check scripts/watcher/doctor.js
+          node --check scripts/platform/index.js
+          node --check scripts/platform/unix.js
+          node --check scripts/platform/windows.js
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: PowerShell syntax
+        shell: powershell
+        run: |
+          $failed = $false
+          Get-ChildItem scripts/windows/*.ps1 | ForEach-Object {
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$null, [ref]$errors)
+            foreach ($error in $errors) {
+              Write-Host "$($_.Name):$($error.Extent.StartLineNumber): $($error.Message)"
+              $failed = $true
+            }
+          }
+          if ($failed) { exit 1 }
+
+      - name: Platform and manifest tests
+        shell: powershell
+        run: |
+          node --test --test-concurrency=1 tests/platform.test.js tests/manifest.test.js
+          if ($LASTEXITCODE -ne 0) { exit 1 }

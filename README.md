@@ -19,7 +19,6 @@ launcher replacement.
 | Started by hand in a pane | Opened by the plugin | Pane beside it closed |
 |---|---|---|
 | ![Freebuff in a plain Herdr pane, agents list empty](docs/screenshots/01-plain-pane-no-agent.png) | ![Freebuff in a plugin pane beside a shell, listed under agents](docs/screenshots/02-plugin-pane-registered.png) | ![Freebuff alone in a tab, still listed under agents](docs/screenshots/03-extra-pane-closed.png) |
-| Herdr has no kind for `freebuff`, so it lists nothing. | The plugin reports the pane, and the sidebar carries its state. | Closing the other pane leaves the entry in place. |
 
 ## Install
 
@@ -48,12 +47,7 @@ there fails with `platform_unsupported`.
 
 If `prefix+f` does nothing, check that Herdr receives the prefix with `prefix+?`;
 editors that bind `ctrl+b` swallow it first. A second prefix goes in `[keys]`,
-above any `[[keys.command]]` entry:
-
-```toml
-[keys]
-prefix = ["ctrl+b", "ctrl+space"]
-```
+above any `[[keys.command]]`, as `prefix = ["ctrl+b", "ctrl+space"]`.
 
 ## Requirements
 
@@ -70,8 +64,8 @@ prefix = ["ctrl+b", "ctrl+space"]
 
 - State: `idle`, `working`, and `blocked` per pane, read from Freebuff's chat
   checkpoint and log.
-- Notifications: Herdr's native agent notifications, with no second path.
-- `herdr agent wait`: waits on the reported state like any other agent.
+- Notifications and `herdr agent wait`: Herdr's own, driven by the reported
+  state.
 - Session restore: reports the chat ID, path, and resume command, which Herdr
   runs after a restart.
 - Actions: `doctor` and `register-pane`, covered below, plus `task`,
@@ -101,6 +95,7 @@ herdr pane report-agent w1:p2 --source freebuff --agent freebuff --state unknown
 does not follow `working` or `blocked` and goes when the pane closes; a plugin
 pane is what gets live state. Register while Freebuff is in the foreground, and
 let the script's `--seq` stand.
+
 Herdr identifies an agent from the foreground command and a closed list of
 built-in kinds, and Freebuff is not one, so no manifest or override makes it
 detectable. [Discussion
@@ -142,12 +137,11 @@ the binding rules.
 
 `sh scripts/doctor.sh [launcher-pid] [chat-id]` prints the watcher, launcher, and
 child PIDs, the bound chat, and the resume argv; inside Herdr, the `doctor`
-action does this for the focused pane. It matches watchers by pane ID and
-inherited `HERDR_SOCKET_PATH`, and on Windows reports
-`process-table-unavailable` for the session match, so pass the launcher PID. If a
-pane has no chat, confirm Freebuff is running in it and that
-`~/.config/manicode/projects/<project>/chats/` holds it; `resume-named` refuses a
-missing chat instead of opening a different one.
+action does this for the focused pane, matching watchers by pane ID and inherited
+`HERDR_SOCKET_PATH`. If a pane has no chat, confirm Freebuff is running in it and
+that `~/.config/manicode/projects/<project>/chats/` holds it; `resume-named`
+refuses a missing chat. On Windows pass the launcher PID, since the session match
+reports `process-table-unavailable`.
 
 ## Development
 
@@ -157,13 +151,11 @@ sh tests/run.sh
 ```
 
 The tests drive `launch.sh` with a fake launcher and a JSON-recording Herdr
-stub, so the PID binding path runs without Herdr.
-`scripts/status-watcher.js` wires four modules, each owning one decision:
-`binding.js` which chat a pane owns, `turns.js` its state, `herdr.js` reports and
-resume argv, `doctor.js` the diagnostic. CI runs Linux and macOS, plus a Windows
-job that parses every `.ps1` and runs the platform and manifest suites. Fixture
-rules are in [CONTRIBUTING.md](CONTRIBUTING.md), releases in
-[CHANGELOG.md](CHANGELOG.md), scope in [SECURITY.md](SECURITY.md).
+stub, so the PID binding path runs without Herdr. CI runs Linux, macOS, and
+Windows; `scripts/status-watcher.js` wires `binding.js`, `turns.js`, `herdr.js`,
+and `doctor.js`, one decision each. Fixture rules are in
+[CONTRIBUTING.md](CONTRIBUTING.md), releases in [CHANGELOG.md](CHANGELOG.md), and
+scope in [SECURITY.md](SECURITY.md).
 
 ## Trust
 
@@ -174,7 +166,7 @@ telemetry; no prompt content sent to Herdr.
 ## License
 
 MIT. Started from
-[TheMetalStorm/herdr-freebuff-plugin](https://github.com/TheMetalStorm/herdr-freebuff-plugin),
+[TheMetalStorm/herdr-freebuff-plugin](https://github.com/TheMetalStorm/herdr-freebuff-plugin)
 with the watcher and chat binding from
-[1024ch/herdr-freebuff-plugin](https://github.com/1024ch/herdr-freebuff-plugin).
-See [CREDITS.md](CREDITS.md) and [LICENSE](LICENSE).
+[1024ch/herdr-freebuff-plugin](https://github.com/1024ch/herdr-freebuff-plugin);
+see [CREDITS.md](CREDITS.md) and [LICENSE](LICENSE).

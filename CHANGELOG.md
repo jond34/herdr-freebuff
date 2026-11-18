@@ -3,6 +3,18 @@
 Notable changes to `herdr-freebuff`. Versions match `version` in
 `herdr-plugin.toml` and use [semantic versioning](https://semver.org/).
 
+## 0.2.2 — 2026-11-18
+
+- Documentation only. The README leads with screenshots, install, use, and
+  limits, and now states what support to expect: best-effort, no SLA, and an
+  adapter expected to be short-lived. The pin in the install instructions moves
+  to `--ref v0.2.2`. No code changed.
+- Verified session restore end to end. Stopping and restarting the Herdr 0.9.5
+  server re-runs the reported resume command (`freebuff --continue <chat>`), and
+  the pane reopens on the previous conversation. Freebuff creates a fresh chat
+  directory for the resumed session, so the bound chat ID changes while the
+  conversation continues.
+
 ## 0.2.1 — 2026-11-17
 
 - Documentation only. The requirements row, `SECURITY.md`, and the CI paragraph
@@ -44,14 +56,6 @@ Notable changes to `herdr-freebuff`. Versions match `version` in
   suite runs on a macOS runner in CI. Linux still takes the procfs path first.
 - Match a chat directory whose path is reported resolved. macOS resolves `/var`
   to `/private/var`, so `lsof` names never matched the projects root before.
-
-## Unreleased
-
-- Verified session restore end to end. Stopping and restarting the Herdr 0.9.5
-  server re-runs the reported resume command (`freebuff --continue <chat>`), and
-  the pane reopens on the previous conversation. Freebuff creates a fresh chat
-  directory for the resumed session, so the bound chat ID changes while the
-  conversation continues.
 
 ## 0.1.4 — 2026-11-17
 

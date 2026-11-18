@@ -24,7 +24,7 @@ herdr plugin pane open --plugin freebuff.integration --entrypoint task
 ```
 
 The pane starts in the directory you invoke it from, and `--cwd <dir>` starts it
-elsewhere. Add `--ref v0.2.1` to pin the release. There is no setup step, `PATH`
+elsewhere. Add `--ref v0.2.2` to pin the release. There is no setup step, `PATH`
 change, or launcher replacement.
 
 On Windows use `--entrypoint task-windows`. Herdr 0.9.5 rejects a manifest that

@@ -9,13 +9,6 @@ Herdr see it: `idle` / `working` / `blocked` in the sidebar, native
 notifications, `herdr agent wait`, and the same conversation back after a
 restart.
 
-```sh
-herdr plugin install jond34/herdr-freebuff
-```
-
-Add `--ref v0.2.1` to pin the release. There is no setup step, `PATH` change, or
-launcher replacement.
-
 | Started by hand in a pane | Opened by the plugin | Pane beside it closed |
 |---|---|---|
 | ![Freebuff in a plain Herdr pane, agents list empty](docs/screenshots/01-plain-pane-no-agent.png) | ![Freebuff in a plugin pane beside a shell, listed under agents](docs/screenshots/02-plugin-pane-registered.png) | ![Freebuff alone in a tab, still listed under agents](docs/screenshots/03-extra-pane-closed.png) |
@@ -23,8 +16,23 @@ launcher replacement.
 
 ## Install
 
-Herdr keybindings can only invoke plugin actions, so the pane opens through one.
-In `~/.config/herdr/config.toml`:
+Two commands, no configuration:
+
+```sh
+herdr plugin install jond34/herdr-freebuff
+herdr plugin pane open --plugin freebuff.integration --entrypoint task
+```
+
+The pane starts in the directory you invoke it from, and `--cwd <dir>` starts it
+elsewhere. Add `--ref v0.2.1` to pin the release. There is no setup step, `PATH`
+change, or launcher replacement.
+
+On Windows use `--entrypoint task-windows`. Herdr 0.9.5 rejects a manifest that
+repeats an id, so every Windows entry carries a `-windows` suffix, and `task`
+there fails with `platform_unsupported`.
+
+For a key instead of the second command, add this to
+`~/.config/herdr/config.toml`:
 
 ```toml
 [[keys.command]]
@@ -34,26 +42,10 @@ command = "freebuff.integration.new-task"
 description = "Freebuff: new task"
 ```
 
-Run `herdr server reload-config`, restart the client (`prefix+q`, then `herdr`),
-and press `prefix+f`. Without a key:
-
-```sh
-herdr plugin pane open --plugin freebuff.integration --entrypoint task
-```
-
-The pane starts in the directory you invoke it from; `--cwd <dir>` starts it
-elsewhere. On Windows ask for `task-windows`: Herdr 0.9.5 rejects a manifest that
-repeats an id, so every Windows entry carries a `-windows` suffix, and `task`
-there fails with `platform_unsupported`.
-
-If `prefix+f` does nothing, check that Herdr receives the prefix with `prefix+?`;
-editors that bind `ctrl+b` swallow it first. A second prefix goes in `[keys]`,
-above any `[[keys.command]]` entry:
-
-```toml
-[keys]
-prefix = ["ctrl+b", "ctrl+space"]
-```
+Then run `herdr server reload-config` and restart the client (`prefix+q`, then
+`herdr`). If the key does nothing, check that Herdr receives the prefix with
+`prefix+?`; editors that bind `ctrl+b` swallow it first. A second prefix goes in
+`[keys]`, above any `[[keys.command]]`, as `prefix = ["ctrl+b", "ctrl+space"]`.
 
 ## Requirements
 
@@ -66,16 +58,16 @@ prefix = ["ctrl+b", "ctrl+space"]
 - Node.js 22+ runs the watcher. Without it the pane starts but stays `unknown`,
   and `doctor` exits.
 
-## What it does
+## Use
 
 - State: `idle`, `working`, and `blocked` per pane, read from Freebuff's chat
   checkpoint and log.
-- Notifications: Herdr's native agent notifications, with no second path.
-- `herdr agent wait`: waits on the reported state like any other agent.
+- Notifications and `herdr agent wait`: Herdr's own, driven by the reported
+  state.
 - Session restore: reports the chat ID, path, and resume command, which Herdr
   runs after a restart.
-- Actions: `doctor` and `register-pane`, covered below, plus `task`,
-  `resume-last`, and `new-task` behind `prefix+f`.
+- Entrypoints: `task` for a new session, `resume-last` for the previous one.
+- Actions: `doctor` and `register-pane`, described below.
 
 Each pane binds its own chat by process tree, so two panes in one project stay
 independent. Windows has no process table cheap enough to poll, so a pane there
@@ -88,7 +80,7 @@ conversation, and Freebuff opened a fresh chat directory, so the chat ID changes
 while the conversation continues. A notification firing was not observed; Herdr
 sends it from the reported state.
 
-## Panes you start yourself
+### Panes you start yourself
 
 Freebuff typed into a plain pane reports nothing, so Herdr lists it as
 `unknown`. Register it once Freebuff is running:
@@ -101,6 +93,7 @@ herdr pane report-agent w1:p2 --source freebuff --agent freebuff --state unknown
 does not follow `working` or `blocked` and goes when the pane closes; a plugin
 pane is what gets live state. Register while Freebuff is in the foreground, and
 let the script's `--seq` stand.
+
 Herdr identifies an agent from the foreground command and a closed list of
 built-in kinds, and Freebuff is not one, so no manifest or override makes it
 detectable. [Discussion
@@ -142,12 +135,11 @@ the binding rules.
 
 `sh scripts/doctor.sh [launcher-pid] [chat-id]` prints the watcher, launcher, and
 child PIDs, the bound chat, and the resume argv; inside Herdr, the `doctor`
-action does this for the focused pane. It matches watchers by pane ID and
-inherited `HERDR_SOCKET_PATH`, and on Windows reports
-`process-table-unavailable` for the session match, so pass the launcher PID. If a
-pane has no chat, confirm Freebuff is running in it and that
-`~/.config/manicode/projects/<project>/chats/` holds it; `resume-named` refuses a
-missing chat instead of opening a different one.
+action does this for the focused pane, matching watchers by pane ID and inherited
+`HERDR_SOCKET_PATH`. If a pane has no chat, confirm Freebuff is running in it and
+that `~/.config/manicode/projects/<project>/chats/` holds it; `resume-named`
+refuses a missing chat. On Windows pass the launcher PID, since the session match
+reports `process-table-unavailable`.
 
 ## Development
 
@@ -157,13 +149,11 @@ sh tests/run.sh
 ```
 
 The tests drive `launch.sh` with a fake launcher and a JSON-recording Herdr
-stub, so the PID binding path runs without Herdr.
-`scripts/status-watcher.js` wires four modules, each owning one decision:
-`binding.js` which chat a pane owns, `turns.js` its state, `herdr.js` reports and
-resume argv, `doctor.js` the diagnostic. CI runs Linux and macOS, plus a Windows
-job that parses every `.ps1` and runs the platform and manifest suites. Fixture
-rules are in [CONTRIBUTING.md](CONTRIBUTING.md), releases in
-[CHANGELOG.md](CHANGELOG.md), scope in [SECURITY.md](SECURITY.md).
+stub, so the PID binding path runs without Herdr. CI runs Linux, macOS, and
+Windows; `scripts/status-watcher.js` wires `binding.js`, `turns.js`, `herdr.js`,
+and `doctor.js`, one decision each. Fixture rules are in
+[CONTRIBUTING.md](CONTRIBUTING.md), releases in [CHANGELOG.md](CHANGELOG.md), and
+scope in [SECURITY.md](SECURITY.md).
 
 ## Trust
 
@@ -174,7 +164,7 @@ telemetry; no prompt content sent to Herdr.
 ## License
 
 MIT. Started from
-[TheMetalStorm/herdr-freebuff-plugin](https://github.com/TheMetalStorm/herdr-freebuff-plugin),
+[TheMetalStorm/herdr-freebuff-plugin](https://github.com/TheMetalStorm/herdr-freebuff-plugin)
 with the watcher and chat binding from
-[1024ch/herdr-freebuff-plugin](https://github.com/1024ch/herdr-freebuff-plugin).
-See [CREDITS.md](CREDITS.md) and [LICENSE](LICENSE).
+[1024ch/herdr-freebuff-plugin](https://github.com/1024ch/herdr-freebuff-plugin);
+see [CREDITS.md](CREDITS.md) and [LICENSE](LICENSE).

@@ -102,16 +102,18 @@ wait "$child"
 
   t.after(async () => {
     for (const pane of ctx.launchers) {
-      try { pane.proc.kill('SIGTERM') } catch {}
+      try { process.kill(-pane.proc.pid, 'SIGKILL') } catch {
+        try { pane.proc.kill('SIGKILL') } catch {}
+      }
     }
     await sleep(100)
     for (const pane of ctx.launchers) {
       const pid = readPid(pane.pidFile)
       if (pid) {
-        try { process.kill(pid, 'SIGTERM') } catch {}
+        try { process.kill(pid, 'SIGKILL') } catch {}
       }
     }
-    await sleep(300)
+    await sleep(100)
     // A pane that is still finishing its exit can create a file between the
     // readdir and the rmdir, so let the removal retry instead of failing the
     // test that already passed its assertions.
@@ -190,6 +192,9 @@ function startPane(ctx, options = {}) {
     cwd: options.cwd || ctx.projectDir,
     env,
     stdio: ['ignore', 'pipe', 'pipe'],
+    // launch.sh execs into the launcher, which leaves the status watcher as a
+    // sibling. A group of its own lets teardown kill the watcher too.
+    detached: true,
   })
   const paneState = { proc, pane, label, pidFile, argsFile, stdout: '', stderr: '' }
   if (proc.stdout) proc.stdout.on('data', (chunk) => { paneState.stdout += String(chunk) })

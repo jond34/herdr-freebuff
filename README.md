@@ -161,6 +161,11 @@ A shell entrypoint and one Node watcher, both here. No binary, installer, npm
 package, or release asset; no global `PATH` wrapper; no network calls or
 telemetry; no prompt content sent to Herdr.
 
+## Support
+
+Best-effort and unfunded: no SLA, and this adapter is expected to be
+short-lived, because it tracks two programs it does not control.
+
 ## License
 
 MIT. Started from

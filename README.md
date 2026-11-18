@@ -25,7 +25,7 @@ herdr plugin install jond34/herdr-freebuff
 That tracks `main`. To pin the current release instead:
 
 ```sh
-herdr plugin install jond34/herdr-freebuff --ref v0.2.0
+herdr plugin install jond34/herdr-freebuff --ref v0.2.1
 ```
 
 A pinned install stays on its ref; a default install picks up new commits on

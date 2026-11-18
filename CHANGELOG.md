@@ -3,6 +3,12 @@
 Notable changes to `herdr-freebuff`. Versions match `version` in
 `herdr-plugin.toml` and use [semantic versioning](https://semver.org/).
 
+## 0.2.1 — 2026-11-17
+
+- Documentation only. The requirements row, `SECURITY.md`, and the CI paragraph
+  now describe Linux, macOS, and Windows instead of calling the project
+  Linux-first. No code changed.
+
 ## 0.2.0 — 2026-11-17
 
 - Run on Windows. Every pane and action now has a PowerShell twin, and the
